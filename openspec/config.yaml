@@ -1,13 +1,15 @@
 schema: spec-driven
 
 context: |
-  Personal workout tracker MVP (single user, no auth). Source of truth for scope: README.md.
+  Personal workout tracker MVP (single user, no user accounts; the API is protected by one shared key, API_TOKEN). Source of truth for scope: README.md.
   Monorepo with npm workspaces: apps/web (React + TypeScript + Vite + vite-plugin-pwa, Tailwind CSS + shadcn/ui),
   apps/api (Node.js + Fastify, SQLite via better-sqlite3, Drizzle ORM + Drizzle Kit migrations),
   packages/shared (Zod schemas + inferred TS types shared by web and api).
   Tests: Vitest (api uses Fastify inject against a temp SQLite file).
-  Decisions: no images/uploads in MVP (keep nullable imagePath column only); workouts with session history are
-  soft-deleted (archivedAt), workouts without history are hard-deleted; no global exercise library;
+  Decisions: auto-populated exercise library keyed by normalized name (exerciseNameKey), linked to templates/sessions by name;
+  up to 5 media per library exercise, compressed by server-side ffmpeg (WebP / MP4), stored in MEDIA_DIR and served under /media;
+  workout_exercises.imagePath is unused; workouts with session history are
+  soft-deleted (archivedAt), workouts without history are hard-deleted;
   templates and sessions are strictly separated (sessions snapshot names/planned values at start);
   string UUID ids; timestamps stored as UTC ISO 8601 strings; no IndexedDB/offline data.
   UI language: Russian. Dark theme, mobile-first.

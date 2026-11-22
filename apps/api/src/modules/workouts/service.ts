@@ -6,16 +6,17 @@ import type {
   WorkoutListItem,
   WorkoutUpdateInput,
 } from '@wt/shared';
-import { ERROR_CODES } from '@wt/shared';
+import { ERROR_CODES, exerciseNameKey } from '@wt/shared';
 import type { Db } from '../../db/client';
 import { AppError } from '../../plugins/errors';
+import { ensureExercises, resolveExercises, type ExerciseLibrary } from '../exercises/service';
 import * as repo from './repository';
 
 function nullable<T>(value: T | null | undefined): T | null {
   return value === undefined || value === '' ? null : value;
 }
 
-function toWorkout(row: repo.WorkoutRow, exercises: repo.WorkoutExerciseRow[]): Workout {
+function toWorkout(row: repo.WorkoutRow, exercises: repo.WorkoutExerciseRow[], library: ExerciseLibrary): Workout {
   return {
     id: row.id,
     name: row.name,
@@ -24,24 +25,34 @@ function toWorkout(row: repo.WorkoutRow, exercises: repo.WorkoutExerciseRow[]): 
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     // imagePath намеренно не экспонируется (изображения вне MVP).
-    exercises: exercises.map((e) => ({
-      id: e.id,
-      name: e.name,
-      description: e.description,
-      position: e.position,
-      plannedSets: e.plannedSets,
-      plannedReps: e.plannedReps,
-      plannedWeight: e.plannedWeight,
-      restSeconds: e.restSeconds,
-      notes: e.notes,
-    })),
+    exercises: exercises.map((e) => {
+      const libraryExercise = library.get(exerciseNameKey(e.name));
+      return {
+        id: e.id,
+        name: e.name,
+        description: e.description,
+        position: e.position,
+        plannedSets: e.plannedSets,
+        plannedReps: e.plannedReps,
+        plannedWeight: e.plannedWeight,
+        restSeconds: e.restSeconds,
+        notes: e.notes,
+        exerciseId: libraryExercise?.id ?? null,
+        media: libraryExercise?.media ?? [],
+      };
+    }),
   };
 }
 
 function loadWorkout(db: repo.DbOrTx, id: string): Workout {
   const row = repo.findWorkout(db, id);
   if (!row) throw new AppError(ERROR_CODES.NOT_FOUND, 404, 'Тренировка не найдена');
-  return toWorkout(row, repo.listExercises(db, id));
+  const exercises = repo.listExercises(db, id);
+  const library = resolveExercises(
+    db,
+    exercises.map((e) => e.name),
+  );
+  return toWorkout(row, exercises, library);
 }
 
 function notFound(): never {
@@ -104,6 +115,11 @@ export function syncWorkoutExercises(
       repo.insertExercise(tx, { id: crypto.randomUUID(), workoutId, createdAt: now, ...fields });
     }
   });
+
+  ensureExercises(
+    tx,
+    items.map((item) => item.name),
+  );
 }
 
 export function listWorkouts(db: Db): WorkoutListItem[] {

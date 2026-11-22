@@ -1,9 +1,14 @@
+import path from 'node:path';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
 import Fastify from 'fastify';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import { createDb, type Db } from './db/client';
+import { registerAccess } from './plugins/access';
 import { registerErrorHandlers } from './plugins/errors';
+import { prepareMedia } from './modules/exercises/media';
+import { exerciseRoutes } from './modules/exercises/routes';
+import { backfillExercises } from './modules/exercises/service';
 import { exchangeRoutes } from './modules/exchange/routes';
 import { healthRoutes } from './modules/health/routes';
 import { sessionRoutes } from './modules/sessions/routes';
@@ -20,6 +25,13 @@ export interface BuildAppOptions {
   dbPath: string;
   /** Каталог со сборкой фронтенда: если задан, api раздаёт статику и index.html для SPA-маршрутов. */
   webDist?: string;
+  /** Общий ключ доступа к /api; без него защита выключена (dev, тесты). */
+  apiToken?: string;
+  /** Каталог медиа (files/ и tmp/); по умолчанию `media/` рядом с файлом БД. */
+  mediaDir?: string;
+  ffmpegPath?: string;
+  /** Лимит размера загружаемого медиа в байтах (по умолчанию MEDIA_LIMITS.maxUploadBytes); нужен тестам. */
+  mediaMaxUploadBytes?: number;
   corsOrigins?: string[];
   corsAllowPrivateNetwork?: boolean;
   logger?: boolean;
@@ -31,6 +43,10 @@ const PRIVATE_NETWORK_ORIGIN =
 export function buildApp({
   dbPath,
   webDist,
+  apiToken,
+  mediaDir = path.join(path.dirname(dbPath), 'media'),
+  ffmpegPath = 'ffmpeg',
+  mediaMaxUploadBytes,
   corsOrigins = [],
   corsAllowPrivateNetwork = false,
   logger = false,
@@ -41,9 +57,19 @@ export function buildApp({
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
   registerErrorHandlers(app, { spaFallback: Boolean(webDist) });
+  backfillExercises(db);
+  const media = prepareMedia(mediaDir, ffmpegPath, app.log);
   if (webDist) {
     app.register(fastifyStatic, { root: webDist });
   }
+  // Файлы медиа неизменяемы (UUID в имени): долгий кэш; Range нужен видео в Safari.
+  app.register(fastifyStatic, {
+    root: media.filesDir,
+    prefix: '/media/',
+    decorateReply: false,
+    immutable: true,
+    maxAge: '365d',
+  });
 
   app.register(cors, {
     origin: (origin, callback) => {
@@ -54,6 +80,8 @@ export function buildApp({
     // @fastify/cors по умолчанию разрешает только GET/HEAD/POST — PATCH и DELETE нужны API явно.
     methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE'],
   });
+  // Хук доступа должен идти после CORS: иначе 401 уходит без CORS-заголовков, и браузер видит «сеть недоступна».
+  app.after(() => registerAccess(app, apiToken));
 
   app.decorate('db', db);
 
@@ -61,6 +89,7 @@ export function buildApp({
   app.register(workoutRoutes(db), { prefix: '/api' });
   app.register(sessionRoutes(db), { prefix: '/api' });
   app.register(exchangeRoutes(db), { prefix: '/api' });
+  app.register(exerciseRoutes(db, media, { maxUploadBytes: mediaMaxUploadBytes }), { prefix: '/api' });
 
   app.addHook('onClose', async () => {
     sqlite.close();

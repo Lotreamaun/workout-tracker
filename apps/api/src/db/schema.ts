@@ -74,3 +74,24 @@ export const setLogs = sqliteTable(
   },
   (table) => [index('set_logs_session_id_idx').on(table.sessionId)],
 );
+
+// Библиотека упражнений: связь с шаблонами и сессиями — по name_key (нормализованное название), без FK.
+export const exercises = sqliteTable('exercises', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  nameKey: text('name_key').notNull().unique(),
+  createdAt: text('created_at').notNull(),
+});
+
+export const exerciseMedia = sqliteTable(
+  'exercise_media',
+  {
+    id: text('id').primaryKey(),
+    exerciseId: text('exercise_id')
+      .notNull()
+      .references(() => exercises.id, { onDelete: 'cascade' }),
+    kind: text('kind', { enum: ['image', 'video'] }).notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [index('exercise_media_exercise_created_idx').on(table.exerciseId, table.createdAt)],
+);

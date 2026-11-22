@@ -5,6 +5,9 @@ const config = loadConfig();
 const app = buildApp({
   dbPath: config.dbPath,
   webDist: config.webDist,
+  apiToken: config.apiToken,
+  mediaDir: config.mediaDir,
+  ffmpegPath: config.ffmpegPath,
   corsOrigins: config.corsOrigins,
   corsAllowPrivateNetwork: config.corsAllowPrivateNetwork,
   logger: true,

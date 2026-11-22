@@ -20,8 +20,9 @@ function body(code: string, message: string, details?: unknown): ApiErrorBody {
 
 export function registerErrorHandlers(app: FastifyInstance, { spaFallback = false } = {}) {
   app.setNotFoundHandler((request, reply) => {
-    // Клиентские маршруты SPA (/history и т.п.) отдаём index.html; неизвестный /api/* остаётся 404 в формате API.
-    if (spaFallback && request.method === 'GET' && !request.url.startsWith('/api/')) {
+    // Клиентские маршруты SPA (/history и т.п.) отдаём index.html; неизвестные /api/* и /media/* остаются 404.
+    const isApiOrMedia = request.url.startsWith('/api/') || request.url.startsWith('/media/');
+    if (spaFallback && request.method === 'GET' && !isApiOrMedia) {
       return reply.sendFile('index.html');
     }
     reply

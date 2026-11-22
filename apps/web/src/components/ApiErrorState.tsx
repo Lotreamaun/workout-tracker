@@ -9,10 +9,13 @@ interface ApiErrorStateProps {
 
 export function ApiErrorState({ error, onRetry }: ApiErrorStateProps) {
   const isNetwork = error instanceof ApiError && error.isNetwork;
-  const title = isNetwork ? 'Сервер недоступен' : 'Не удалось загрузить данные';
+  const unauthorized = error instanceof ApiError && error.status === 401;
+  const title = isNetwork ? 'Сервер недоступен' : unauthorized ? 'Нужен ключ доступа' : 'Не удалось загрузить данные';
   const description = isNetwork
     ? 'Проверьте, что backend запущен и устройство в одной сети с компьютером.'
-    : error instanceof Error
+    : unauthorized
+      ? 'Введите ключ доступа, чтобы открыть данные.'
+      : error instanceof Error
       ? error.message
       : 'Произошла неизвестная ошибка.';
 

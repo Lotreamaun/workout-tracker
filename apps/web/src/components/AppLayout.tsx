@@ -1,10 +1,12 @@
-import { Dumbbell, History, Home, Sparkles, type LucideIcon } from 'lucide-react';
+import { Dumbbell, History, Home, Library, Sparkles, type LucideIcon } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router';
+import { AccessKeyDialog } from '@/components/AccessKeyDialog';
 import { cn } from '@/lib/utils';
 
 const navItems: { to: string; label: string; icon: LucideIcon; end?: boolean }[] = [
   { to: '/', label: 'Главная', icon: Home, end: true },
   { to: '/workouts', label: 'Тренировки', icon: Dumbbell },
+  { to: '/exercises', label: 'Упражнения', icon: Library },
   { to: '/history', label: 'История', icon: History },
   { to: '/exchange', label: 'AI-обмен', icon: Sparkles },
 ];
@@ -49,7 +51,7 @@ export function AppLayout() {
 
       <nav
         aria-label="Основная навигация"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       >
         {navItems.map(({ to, label, icon: Icon, end }) => (
           <NavLink
@@ -58,7 +60,7 @@ export function AppLayout() {
             end={end}
             className={({ isActive }) =>
               cn(
-                'flex h-16 flex-col items-center justify-center gap-1 text-xs font-medium transition-colors',
+                'flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors',
                 isActive ? 'text-primary' : 'text-muted-foreground',
               )
             }
@@ -68,6 +70,8 @@ export function AppLayout() {
           </NavLink>
         ))}
       </nav>
+
+      <AccessKeyDialog />
     </div>
   );
 }

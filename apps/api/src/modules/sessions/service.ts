@@ -5,9 +5,10 @@ import type {
   SessionListQuery,
   SessionPatchInput,
 } from '@wt/shared';
-import { ERROR_CODES } from '@wt/shared';
+import { ERROR_CODES, exerciseNameKey } from '@wt/shared';
 import type { Db } from '../../db/client';
 import { AppError } from '../../plugins/errors';
+import { resolveExercises, type ExerciseLibrary } from '../exercises/service';
 import * as workoutRepo from '../workouts/repository';
 import * as repo from './repository';
 
@@ -19,7 +20,8 @@ function notFound(): never {
   throw new AppError(ERROR_CODES.NOT_FOUND, 404, 'Сессия не найдена');
 }
 
-export function toSession(row: repo.SessionRow, sets: repo.SetLogRow[]): Session {
+/** `library` — упражнения библиотеки по ключу названия; без него (экспорт) `exerciseId` = null и `media` пуст. */
+export function toSession(row: repo.SessionRow, sets: repo.SetLogRow[], library: ExerciseLibrary = new Map()): Session {
   // Упражнение сессии = группа подходов по exercisePosition; имя, отдых и пропуск берутся из первого подхода.
   const groups = new Map<number, repo.SetLogRow[]>();
   for (const set of sets) {
@@ -40,12 +42,15 @@ export function toSession(row: repo.SessionRow, sets: repo.SetLogRow[]): Session
       .sort(([a], [b]) => a - b)
       .map(([exercisePosition, group]) => {
         const first = group[0]!;
+        const libraryExercise = library.get(exerciseNameKey(first.exerciseNameSnapshot));
         return {
           workoutExerciseId: first.workoutExerciseId,
           exercisePosition,
           name: first.exerciseNameSnapshot,
           restSeconds: first.restSeconds,
           isSkipped: first.isSkipped,
+          exerciseId: libraryExercise?.id ?? null,
+          media: libraryExercise?.media ?? [],
           sets: group.map((s) => ({
             id: s.id,
             setNumber: s.setNumber,
@@ -66,7 +71,12 @@ export function toSession(row: repo.SessionRow, sets: repo.SetLogRow[]): Session
 function loadSession(db: repo.DbOrTx, id: string): Session {
   const row = repo.findSession(db, id);
   if (!row) notFound();
-  return toSession(row, repo.listSetLogs(db, id));
+  const sets = repo.listSetLogs(db, id);
+  const library = resolveExercises(
+    db,
+    sets.map((s) => s.exerciseNameSnapshot),
+  );
+  return toSession(row, sets, library);
 }
 
 export function getSession(db: Db, id: string): Session {

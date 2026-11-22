@@ -1,8 +1,9 @@
-import { Archive, Pencil } from 'lucide-react';
+import { Archive, ImagePlus, Images, Pencil } from 'lucide-react';
 import { Link } from 'react-router';
 import type { Workout } from '@wt/shared';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { MediaStrip } from '@/features/exercises/MediaStrip';
 import { StartWorkoutButton } from '@/features/sessions/StartWorkoutButton';
 import { formatExercisePlan } from '@/features/sessions/format';
 
@@ -69,6 +70,15 @@ export function WorkoutView({ workout }: { workout: Workout }) {
                     </p>
                   </div>
                 </div>
+                <MediaStrip title={exercise.name} media={exercise.media} />
+                {exercise.exerciseId && (
+                  <Button asChild variant="ghost" size="sm" className="self-start">
+                    <Link to={`/exercises/${exercise.exerciseId}`}>
+                      {exercise.media.length === 0 ? <ImagePlus aria-hidden /> : <Images aria-hidden />}
+                      {exercise.media.length === 0 ? 'Добавить медиа' : 'Медиа'}
+                    </Link>
+                  </Button>
+                )}
                 {exercise.description && (
                   <p className="text-sm whitespace-pre-wrap wrap-anywhere">{exercise.description}</p>
                 )}

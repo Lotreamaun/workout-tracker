@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { exerciseMediaSchema } from './exercises';
 
 export const WORKOUT_LIMITS = {
   nameMax: 120,
@@ -54,6 +55,9 @@ export const workoutExerciseSchema = z.object({
   plannedWeight: z.number().nullable(),
   restSeconds: z.number().int().nullable(),
   notes: z.string().nullable(),
+  // Связь с библиотекой по нормализованному названию; только для чтения.
+  exerciseId: z.string().nullable(),
+  media: z.array(exerciseMediaSchema),
 });
 
 export const workoutSchema = z.object({

@@ -9,6 +9,7 @@ import {
 } from '@wt/shared';
 import type { Db } from '../../db/client';
 import { AppError } from '../../plugins/errors';
+import { ensureExercises } from '../exercises/service';
 import * as sessionRepo from '../sessions/repository';
 import * as workoutRepo from '../workouts/repository';
 import { syncWorkoutExercises } from '../workouts/service';
@@ -98,6 +99,10 @@ function executePlan(tx: repo.DbOrTx, plan: ImportPlan) {
           updatedAt: now,
         });
       });
+      ensureExercises(
+        tx,
+        workout.exercises.map(({ input }) => input.name),
+      );
     } else {
       const patch: Partial<workoutRepo.WorkoutRow> = { name: workout.name, updatedAt: now };
       if (workout.description !== undefined) patch.description = workout.description;

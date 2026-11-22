@@ -2,6 +2,7 @@ import { RotateCcw, SkipForward } from 'lucide-react';
 import type { SessionExercise, SessionSetPatch } from '@wt/shared';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { MediaStrip } from '@/features/exercises/MediaStrip';
 import { cn } from '@/lib/utils';
 import { SetRow } from './SetRow';
 
@@ -39,6 +40,8 @@ export function ExerciseCard({ exercise, disabled, onSaveSet, onToggleSkip, onSe
           {exercise.isSkipped ? 'Вернуть' : 'Пропустить'}
         </Button>
       </div>
+
+      <MediaStrip title={exercise.name} media={exercise.media} />
 
       <ul className={cn('space-y-2', exercise.isSkipped && 'opacity-50')}>
         {exercise.sets.map((set) => (

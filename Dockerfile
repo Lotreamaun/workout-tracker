@@ -1,4 +1,4 @@
-# Один контейнер: Fastify раздаёт API и собранный фронтенд, SQLite лежит в /app/data (volume).
+# Один контейнер: Fastify раздаёт API и собранный фронтенд, SQLite и медиа лежат в /app/data (volume).
 FROM node:24-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json tsconfig.base.json ./
@@ -20,10 +20,13 @@ COPY packages/shared/package.json packages/shared/
 RUN npm ci --omit=dev -w @wt/api
 
 FROM node:24-slim AS runtime
+# ffmpeg сжимает загружаемые медиа упражнений.
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production \
     PORT=8080 \
     HOST=0.0.0.0 \
     DB_PATH=data/workout-tracker.db \
+    MEDIA_DIR=data/media \
     WEB_DIST=apps/web/dist
 WORKDIR /app
 COPY package.json tsconfig.base.json ./

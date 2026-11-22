@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { exerciseMediaSchema } from './exercises';
 import { WORKOUT_LIMITS } from './workouts';
 
 export const SESSION_LIMITS = {
@@ -73,6 +74,9 @@ export const sessionExerciseSchema = z.object({
   name: z.string(),
   restSeconds: z.number().int().nullable(),
   isSkipped: z.boolean(),
+  // Связь с библиотекой по нормализованному названию из снимка; только для чтения.
+  exerciseId: z.string().nullable(),
+  media: z.array(exerciseMediaSchema),
   sets: z.array(sessionSetSchema),
 });
 

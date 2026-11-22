@@ -2,6 +2,8 @@ import {
   apiErrorSchema,
   deleteWorkoutResultSchema,
   exchangeDocumentSchema,
+  exerciseListSchema,
+  exerciseSchema,
   healthResponseSchema,
   importCommitResponseSchema,
   importPreviewResponseSchema,
@@ -11,6 +13,7 @@ import {
   workoutSchema,
   type DeleteWorkoutResult,
   type ExchangeDocument,
+  type Exercise,
   type HealthResponse,
   type ImportCommitInput,
   type ImportCommitResponse,
@@ -26,13 +29,19 @@ import {
   type WorkoutListItem,
   type WorkoutUpdateInput,
 } from '@wt/shared';
-import type { ZodType } from 'zod';
+import { z, type ZodType } from 'zod';
+import { getAccessKey, notifyAccessKeyRequired } from './accessKey';
 
 // В продакшене api раздаёт и фронтенд, поэтому запросы идут на тот же origin.
 const API_BASE_URL = (
   import.meta.env.VITE_API_URL ||
   (import.meta.env.PROD ? '' : `${window.location.protocol}//${window.location.hostname}:3000`)
 ).replace(/\/$/, '');
+
+/** Адрес медиа-файла: пути `/media/...` в dev живут на порту api. */
+export function mediaSrc(path: string): string {
+  return `${API_BASE_URL}${path}`;
+}
 
 export type ApiErrorKind = 'network' | 'http';
 
@@ -54,9 +63,13 @@ export class ApiError extends Error {
 }
 
 export async function apiRequest<T>(path: string, schema: ZodType<T>, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  const accessKey = getAccessKey();
+  if (accessKey) headers.set('Authorization', `Bearer ${accessKey}`);
+
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, init);
+    response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
   } catch {
     throw new ApiError('network', 'Сервер недоступен');
   }
@@ -67,6 +80,7 @@ export async function apiRequest<T>(path: string, schema: ZodType<T>, init?: Req
     const parsed = apiErrorSchema.safeParse(payload);
     if (parsed.success) {
       const { code, message, details } = parsed.data.error;
+      if (response.status === 401 && code === 'UNAUTHORIZED') notifyAccessKeyRequired();
       throw new ApiError('http', message, response.status, code, details);
     }
     throw new ApiError('http', `Ошибка сервера (${response.status})`, response.status);
@@ -104,6 +118,20 @@ export const api = {
     apiRequest(`/api/sessions/${encodeURIComponent(id)}`, sessionSchema, jsonBody('PATCH', input)),
   completeSession: (id: string, input: SessionCompleteInput = {}): Promise<Session> =>
     apiRequest(`/api/sessions/${encodeURIComponent(id)}/complete`, sessionSchema, jsonBody('POST', input)),
+  listExercises: (): Promise<Exercise[]> => apiRequest('/api/exercises', exerciseListSchema),
+  getExercise: (id: string): Promise<Exercise> => apiRequest(`/api/exercises/${encodeURIComponent(id)}`, exerciseSchema),
+  // 204 без тела: apiRequest отдаёт undefined.
+  deleteExercise: (id: string): Promise<undefined> =>
+    apiRequest(`/api/exercises/${encodeURIComponent(id)}`, z.undefined(), { method: 'DELETE' }),
+  // Без Content-Type: браузер сам выставит multipart с boundary.
+  uploadExerciseMedia: (id: string, form: FormData): Promise<Exercise> =>
+    apiRequest(`/api/exercises/${encodeURIComponent(id)}/media`, exerciseSchema, { method: 'POST', body: form }),
+  deleteExerciseMedia: (id: string, mediaId: string): Promise<Exercise> =>
+    apiRequest(
+      `/api/exercises/${encodeURIComponent(id)}/media/${encodeURIComponent(mediaId)}`,
+      exerciseSchema,
+      { method: 'DELETE' },
+    ),
   exportData: (includeSessions: boolean): Promise<ExchangeDocument> =>
     apiRequest(`/api/export?includeSessions=${includeSessions}`, exchangeDocumentSchema),
   previewImport: (input: ImportPreviewInput): Promise<ImportPreviewResponse> =>

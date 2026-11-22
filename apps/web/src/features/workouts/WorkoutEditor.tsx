@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useExercises } from '@/features/exercises/hooks';
 import { DeleteWorkoutButton } from './DeleteWorkoutButton';
 import { formatSaveError } from './formatError';
 import { useSaveWorkout } from './hooks';
+import { NameSuggestions } from './NameSuggestions';
 
 interface ExerciseForm {
   key: string;
@@ -79,11 +81,14 @@ export function WorkoutEditor({ workout }: WorkoutEditorProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const save = useSaveWorkout(workout?.id);
+  const exercisesLibrary = useExercises();
 
   const [name, setName] = useState(workout?.name ?? '');
   const [description, setDescription] = useState(workout?.description ?? '');
   const [exercises, setExercises] = useState<ExerciseForm[]>(() => (workout ? fromWorkout(workout) : []));
   const [errors, setErrors] = useState<string[]>([]);
+  const [focusedKey, setFocusedKey] = useState<string | null>(null);
+  const libraryNames = exercisesLibrary.data?.map((exercise) => exercise.name) ?? [];
 
   const patchExercise = (key: string, patch: Partial<ExerciseForm>) =>
     setExercises((list) => list.map((e) => (e.key === key ? { ...e, ...patch } : e)));
@@ -197,10 +202,19 @@ export function WorkoutEditor({ workout }: WorkoutEditorProps) {
                   id={`${exercise.key}-name`}
                   value={exercise.name}
                   onChange={(e) => patchExercise(exercise.key, { name: e.target.value })}
+                  onFocus={() => setFocusedKey(exercise.key)}
+                  onBlur={() => setFocusedKey((current) => (current === exercise.key ? null : current))}
                   maxLength={120}
                   placeholder="Например, Присед"
                   required
                 />
+                {focusedKey === exercise.key && (
+                  <NameSuggestions
+                    value={exercise.name}
+                    names={libraryNames}
+                    onPick={(name) => patchExercise(exercise.key, { name })}
+                  />
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
