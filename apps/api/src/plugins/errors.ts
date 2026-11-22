@@ -18,8 +18,12 @@ function body(code: string, message: string, details?: unknown): ApiErrorBody {
   return { error: details === undefined ? { code, message } : { code, message, details } };
 }
 
-export function registerErrorHandlers(app: FastifyInstance) {
+export function registerErrorHandlers(app: FastifyInstance, { spaFallback = false } = {}) {
   app.setNotFoundHandler((request, reply) => {
+    // Клиентские маршруты SPA (/history и т.п.) отдаём index.html; неизвестный /api/* остаётся 404 в формате API.
+    if (spaFallback && request.method === 'GET' && !request.url.startsWith('/api/')) {
+      return reply.sendFile('index.html');
+    }
     reply
       .status(404)
       .send(body(ERROR_CODES.NOT_FOUND, `Маршрут ${request.method} ${request.url.split('?')[0]} не найден`));

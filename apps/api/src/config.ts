@@ -8,6 +8,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   HOST: z.string().min(1).default('0.0.0.0'),
   DB_PATH: z.string().min(1).default('data/workout-tracker.db'),
+  // Каталог со сборкой фронтенда (apps/web/dist): если задан, api раздаёт и веб-приложение.
+  WEB_DIST: z.string().min(1).optional(),
   CORS_ORIGINS: z.string().default('http://localhost:5173'),
   CORS_ALLOW_PRIVATE_NETWORK: z
     .enum(['true', 'false'])
@@ -19,6 +21,7 @@ export interface Config {
   port: number;
   host: string;
   dbPath: string;
+  webDist?: string;
   corsOrigins: string[];
   corsAllowPrivateNetwork: boolean;
 }
@@ -28,11 +31,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   if (!parsed.success) {
     throw new Error(`Некорректные переменные окружения: ${z.prettifyError(parsed.error)}`);
   }
-  const { PORT, HOST, DB_PATH, CORS_ORIGINS, CORS_ALLOW_PRIVATE_NETWORK } = parsed.data;
+  const { PORT, HOST, DB_PATH, WEB_DIST, CORS_ORIGINS, CORS_ALLOW_PRIVATE_NETWORK } = parsed.data;
   return {
     port: PORT,
     host: HOST,
     dbPath: path.resolve(repoRoot, DB_PATH),
+    webDist: WEB_DIST ? path.resolve(repoRoot, WEB_DIST) : undefined,
     corsOrigins: CORS_ORIGINS.split(',')
       .map((origin) => origin.trim())
       .filter(Boolean),

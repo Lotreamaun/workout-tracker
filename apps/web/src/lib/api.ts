@@ -28,8 +28,10 @@ import {
 } from '@wt/shared';
 import type { ZodType } from 'zod';
 
+// В продакшене api раздаёт и фронтенд, поэтому запросы идут на тот же origin.
 const API_BASE_URL = (
-  import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:3000`
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? '' : `${window.location.protocol}//${window.location.hostname}:3000`)
 ).replace(/\/$/, '');
 
 export type ApiErrorKind = 'network' | 'http';

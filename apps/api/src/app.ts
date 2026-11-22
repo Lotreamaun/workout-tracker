@@ -1,4 +1,5 @@
 import cors from '@fastify/cors';
+import fastifyStatic from '@fastify/static';
 import Fastify from 'fastify';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import { createDb, type Db } from './db/client';
@@ -17,6 +18,8 @@ declare module 'fastify' {
 
 export interface BuildAppOptions {
   dbPath: string;
+  /** Каталог со сборкой фронтенда: если задан, api раздаёт статику и index.html для SPA-маршрутов. */
+  webDist?: string;
   corsOrigins?: string[];
   corsAllowPrivateNetwork?: boolean;
   logger?: boolean;
@@ -27,6 +30,7 @@ const PRIVATE_NETWORK_ORIGIN =
 
 export function buildApp({
   dbPath,
+  webDist,
   corsOrigins = [],
   corsAllowPrivateNetwork = false,
   logger = false,
@@ -36,7 +40,10 @@ export function buildApp({
 
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
-  registerErrorHandlers(app);
+  registerErrorHandlers(app, { spaFallback: Boolean(webDist) });
+  if (webDist) {
+    app.register(fastifyStatic, { root: webDist });
+  }
 
   app.register(cors, {
     origin: (origin, callback) => {

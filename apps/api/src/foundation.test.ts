@@ -173,6 +173,25 @@ describe('foundation: каркас API', () => {
     expect(denied.headers['access-control-allow-origin']).toBeUndefined();
   });
 
+  it('при заданном webDist раздаёт фронтенд, SPA-маршруты и оставляет 404 для /api', async () => {
+    const webDist = path.join(dir, 'web');
+    fs.mkdirSync(webDist);
+    fs.writeFileSync(path.join(webDist, 'index.html'), '<html>spa</html>');
+    const app = newApp({ webDist });
+
+    const index = await app.inject({ method: 'GET', url: '/' });
+    expect(index.statusCode).toBe(200);
+    expect(index.body).toContain('spa');
+
+    const route = await app.inject({ method: 'GET', url: '/history' });
+    expect(route.statusCode).toBe(200);
+    expect(route.body).toContain('spa');
+
+    const missingApi = await app.inject({ method: 'GET', url: '/api/does-not-exist' });
+    expect(missingApi.statusCode).toBe(404);
+    expect(parseErrorBody(missingApi.json()).code).toBe('NOT_FOUND');
+  });
+
   it.each(['PATCH', 'DELETE'])('CORS preflight разрешает метод %s', async (method) => {
     const app = newApp({ corsOrigins: ['http://allowed.test'] });
 

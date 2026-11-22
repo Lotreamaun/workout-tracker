@@ -4,6 +4,7 @@ import { loadConfig } from './config';
 const config = loadConfig();
 const app = buildApp({
   dbPath: config.dbPath,
+  webDist: config.webDist,
   corsOrigins: config.corsOrigins,
   corsAllowPrivateNetwork: config.corsAllowPrivateNetwork,
   logger: true,
