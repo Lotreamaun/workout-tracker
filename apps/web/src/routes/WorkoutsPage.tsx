@@ -63,7 +63,7 @@ export function WorkoutsPage() {
                 className="block rounded-xl focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
               >
                 <Card className="gap-1 px-5 transition-colors hover:bg-accent">
-                  <p className="text-lg font-semibold">{workout.name}</p>
+                  <p className="text-lg font-semibold wrap-anywhere">{workout.name}</p>
                   <p className="text-sm text-muted-foreground">
                     {pluralExercises(workout.exerciseCount)} ·{' '}
                     {workout.lastPerformedAt

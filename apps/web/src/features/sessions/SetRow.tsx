@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, MessageSquare } from 'lucide-react';
 import type { SessionSet, SessionSetPatch } from '@wt/shared';
+import { AutoTextarea } from '@/components/ui/auto-textarea';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { formatNumber, buildCompletePatch, parseReps, parseRpe, parseWeight } from './setInput';
@@ -163,7 +164,8 @@ export function SetRow({ set, disabled, onSave, onCompleted }: SetRowProps) {
       )}
 
       {noteOpen ? (
-        <Input
+        <AutoTextarea
+          rows={1}
           value={noteText}
           maxLength={2000}
           placeholder="Заметка к подходу"

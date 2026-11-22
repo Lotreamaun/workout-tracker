@@ -29,9 +29,9 @@ export function HomePage() {
       {active.isError && <ApiErrorState error={active.error} onRetry={() => void active.refetch()} />}
       {activeSession && (
         <Card className="gap-3 border-primary/60 px-5">
-          <div>
+          <div className="min-w-0">
             <p className="text-sm text-muted-foreground">Тренировка идёт</p>
-            <p className="text-lg font-semibold">{activeSession.workoutNameSnapshot}</p>
+            <p className="text-lg font-semibold wrap-anywhere">{activeSession.workoutNameSnapshot}</p>
             <p className="text-sm text-muted-foreground">
               Начата в {formatTime(activeSession.startedAt)} · {formatSetsProgress(activeSession.completedSets, activeSession.totalSets)}
             </p>
@@ -61,8 +61,8 @@ export function HomePage() {
             {workouts.data.map((workout) => (
               <li key={workout.id}>
                 <Card className="gap-3 px-5">
-                  <div>
-                    <p className="text-lg font-semibold">{workout.name}</p>
+                  <div className="min-w-0">
+                    <p className="text-lg font-semibold wrap-anywhere">{workout.name}</p>
                     <p className="text-sm text-muted-foreground">
                       {workout.lastPerformedAt
                         ? `выполнена ${new Date(workout.lastPerformedAt).toLocaleDateString('ru-RU')}`
@@ -102,7 +102,7 @@ export function HomePage() {
                   className="flex items-center justify-between gap-3 rounded-xl border bg-card p-4 transition-colors hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                 >
                   <div className="min-w-0">
-                    <p className="font-semibold">{session.workoutNameSnapshot}</p>
+                    <p className="font-semibold wrap-anywhere">{session.workoutNameSnapshot}</p>
                     <p className="text-sm text-muted-foreground">
                       {formatDateTime(session.startedAt)} · {formatSetsProgress(session.completedSets, session.totalSets)}
                     </p>

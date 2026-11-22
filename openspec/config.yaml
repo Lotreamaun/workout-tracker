@@ -10,7 +10,7 @@ context: |
   soft-deleted (archivedAt), workouts without history are hard-deleted; no global exercise library;
   templates and sessions are strictly separated (sessions snapshot names/planned values at start);
   string UUID ids; timestamps stored as UTC ISO 8601 strings; no IndexedDB/offline data.
-  UI language: Russian. Dark theme, mobile-first. Not a git repository.
+  UI language: Russian. Dark theme, mobile-first.
 
 rules:
   tasks:

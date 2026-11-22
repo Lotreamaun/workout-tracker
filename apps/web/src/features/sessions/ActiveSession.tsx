@@ -3,7 +3,7 @@ import { CircleAlert } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import type { Session, SessionExercise } from '@wt/shared';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { AutoTextarea } from '@/components/ui/auto-textarea';
 import { formatSaveError } from '@/features/workouts/formatError';
 import { ConfirmDialog } from './ConfirmDialog';
 import { ExerciseCard } from './ExerciseCard';
@@ -92,7 +92,7 @@ export function ActiveSession({ session }: ActiveSessionProps) {
         <label htmlFor="session-notes" className="text-sm font-medium">
           Заметки к тренировке
         </label>
-        <Textarea
+        <AutoTextarea
           id="session-notes"
           value={notes}
           maxLength={2000}

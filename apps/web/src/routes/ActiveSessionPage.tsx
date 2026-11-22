@@ -16,7 +16,7 @@ export function ActiveSessionPage() {
 
   return (
     <section className="space-y-4">
-      <h1 className="text-2xl font-bold">{session.data?.workoutNameSnapshot ?? 'Тренировка'}</h1>
+      <h1 className="text-2xl font-bold wrap-anywhere">{session.data?.workoutNameSnapshot ?? 'Тренировка'}</h1>
 
       {session.isPending && (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">

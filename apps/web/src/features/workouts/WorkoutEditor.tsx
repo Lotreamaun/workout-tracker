@@ -1,12 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import type { ExerciseInput, Workout, WorkoutCreateInput } from '@wt/shared';
+import { AutoTextarea } from '@/components/ui/auto-textarea';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { DeleteWorkoutButton } from './DeleteWorkoutButton';
 import { formatSaveError } from './formatError';
 import { useSaveWorkout } from './hooks';
@@ -77,8 +77,8 @@ interface WorkoutEditorProps {
 
 export function WorkoutEditor({ workout }: WorkoutEditorProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const save = useSaveWorkout(workout?.id);
-  const archived = workout?.archivedAt != null;
 
   const [name, setName] = useState(workout?.name ?? '');
   const [description, setDescription] = useState(workout?.description ?? '');
@@ -104,24 +104,24 @@ export function WorkoutEditor({ workout }: WorkoutEditorProps) {
     setErrors([]);
     const input: WorkoutCreateInput = { name, description, exercises: exercises.map(toExerciseInput) };
     save.mutate(input, {
-      onSuccess: () => navigate('/workouts'),
+      onSuccess: (saved) => {
+        // Редактор открыт из просмотра — возвращаемся на ту же запись истории, чтобы «Назад» не вёл обратно в форму.
+        // Иначе (создание или прямой заход) заменяем форму просмотром.
+        if (workout && location.key !== 'default') navigate(-1);
+        else navigate(`/workouts/${saved.id}`, { replace: true });
+      },
       onError: (error) => setErrors(formatSaveError(error)),
     });
   };
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
-      {archived && (
-        <p role="status" className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-          Тренировка находится в архиве (по ней есть история) и доступна только для просмотра.
-        </p>
-      )}
-
-      <fieldset disabled={archived || save.isPending} className="space-y-6">
+      <fieldset disabled={save.isPending} className="space-y-6">
         <Card className="gap-4 px-5">
           <div className="space-y-2">
             <Label htmlFor="workout-name">Название</Label>
-            <Input
+            <AutoTextarea
+              singleLine
               id="workout-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -132,7 +132,7 @@ export function WorkoutEditor({ workout }: WorkoutEditorProps) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="workout-description">Описание</Label>
-            <Textarea
+            <AutoTextarea
               id="workout-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -192,7 +192,8 @@ export function WorkoutEditor({ workout }: WorkoutEditorProps) {
 
               <div className="space-y-2">
                 <Label htmlFor={`${exercise.key}-name`}>Название</Label>
-                <Input
+                <AutoTextarea
+                  singleLine
                   id={`${exercise.key}-name`}
                   value={exercise.name}
                   onChange={(e) => patchExercise(exercise.key, { name: e.target.value })}
@@ -243,7 +244,7 @@ export function WorkoutEditor({ workout }: WorkoutEditorProps) {
 
               <div className="space-y-2">
                 <Label htmlFor={`${exercise.key}-description`}>Описание</Label>
-                <Input
+                <AutoTextarea
                   id={`${exercise.key}-description`}
                   value={exercise.description}
                   onChange={(e) => patchExercise(exercise.key, { description: e.target.value })}
@@ -253,7 +254,7 @@ export function WorkoutEditor({ workout }: WorkoutEditorProps) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor={`${exercise.key}-notes`}>Заметки</Label>
-                <Textarea
+                <AutoTextarea
                   id={`${exercise.key}-notes`}
                   value={exercise.notes}
                   onChange={(e) => patchExercise(exercise.key, { notes: e.target.value })}
@@ -284,13 +285,11 @@ export function WorkoutEditor({ workout }: WorkoutEditorProps) {
         </div>
       )}
 
-      {!archived && (
-        <Button type="submit" size="lg" className="w-full" disabled={save.isPending}>
-          {save.isPending ? 'Сохраняем…' : 'Сохранить'}
-        </Button>
-      )}
+      <Button type="submit" size="lg" className="w-full" disabled={save.isPending}>
+        {save.isPending ? 'Сохраняем…' : 'Сохранить'}
+      </Button>
 
-      {workout && !archived && <DeleteWorkoutButton workoutId={workout.id} />}
+      {workout && <DeleteWorkoutButton workoutId={workout.id} />}
     </form>
   );
 }

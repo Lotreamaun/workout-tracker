@@ -19,8 +19,8 @@ export function ExerciseCard({ exercise, disabled, onSaveSet, onToggleSkip, onSe
   return (
     <Card className="gap-3 px-4" data-testid="session-exercise">
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h2 className={cn('text-lg font-semibold', exercise.isSkipped && 'text-muted-foreground line-through')}>
+        <div className="min-w-0 flex-1">
+          <h2 className={cn('text-lg font-semibold wrap-anywhere', exercise.isSkipped && 'text-muted-foreground line-through')}>
             {exercise.name}
           </h2>
           <p className="text-sm text-muted-foreground">

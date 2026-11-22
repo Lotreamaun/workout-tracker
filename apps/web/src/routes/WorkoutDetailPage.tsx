@@ -1,8 +1,7 @@
 import { ArrowLeft, LoaderCircle } from 'lucide-react';
 import { Link, useParams } from 'react-router';
 import { ApiErrorState } from '@/components/ApiErrorState';
-import { StartWorkoutButton } from '@/features/sessions/StartWorkoutButton';
-import { WorkoutEditor } from '@/features/workouts/WorkoutEditor';
+import { WorkoutView } from '@/features/workouts/WorkoutView';
 import { useWorkout } from '@/features/workouts/hooks';
 import { ApiError } from '@/lib/api';
 
@@ -14,6 +13,27 @@ export function BackToWorkouts() {
   );
 }
 
+/** Состояния загрузки и ошибки запроса тренировки (общие для просмотра и редактирования). */
+export function WorkoutQueryState({ workout }: { workout: ReturnType<typeof useWorkout> }) {
+  if (workout.isPending) {
+    return (
+      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+        <LoaderCircle className="size-4 animate-spin" aria-hidden /> Загружаем…
+      </p>
+    );
+  }
+  if (workout.isError) {
+    return workout.error instanceof ApiError && workout.error.status === 404 ? (
+      <p role="alert" className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+        Тренировка не найдена.
+      </p>
+    ) : (
+      <ApiErrorState error={workout.error} onRetry={() => void workout.refetch()} />
+    );
+  }
+  return null;
+}
+
 export function WorkoutDetailPage() {
   const { id } = useParams();
   const workout = useWorkout(id);
@@ -21,25 +41,9 @@ export function WorkoutDetailPage() {
   return (
     <section className="space-y-4">
       <BackToWorkouts />
-      <h1 className="text-2xl font-bold">{workout.data?.name ?? 'Тренировка'}</h1>
-
-      {workout.isPending && (
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <LoaderCircle className="size-4 animate-spin" aria-hidden /> Загружаем…
-        </p>
-      )}
-      {workout.isError &&
-        (workout.error instanceof ApiError && workout.error.status === 404 ? (
-          <p role="alert" className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-            Тренировка не найдена.
-          </p>
-        ) : (
-          <ApiErrorState error={workout.error} onRetry={() => void workout.refetch()} />
-        ))}
-      {workout.isSuccess && workout.data.archivedAt === null && (
-        <StartWorkoutButton workoutId={workout.data.id} size="lg" className="w-full" />
-      )}
-      {workout.isSuccess && <WorkoutEditor key={`${workout.data.id}:${workout.data.updatedAt}`} workout={workout.data} />}
+      <h1 className="text-2xl font-bold wrap-anywhere">{workout.data?.name ?? 'Тренировка'}</h1>
+      <WorkoutQueryState workout={workout} />
+      {workout.isSuccess && <WorkoutView workout={workout.data} />}
     </section>
   );
 }

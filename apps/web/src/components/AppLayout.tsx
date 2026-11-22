@@ -12,7 +12,7 @@ const navItems: { to: string; label: string; icon: LucideIcon; end?: boolean }[]
 export function AppLayout() {
   return (
     <div className="min-h-dvh md:flex">
-      <aside className="hidden w-60 shrink-0 flex-col gap-1 border-r p-4 md:flex">
+      <aside className="hidden w-60 shrink-0 flex-col gap-1 border-r p-4 md:flex md:sticky md:top-0 md:h-dvh md:self-start md:overflow-y-auto">
         <div className="mb-4 flex items-center gap-2 px-3 py-2 text-lg font-semibold">
           <Dumbbell className="size-5 text-primary" aria-hidden />
           Workout Tracker

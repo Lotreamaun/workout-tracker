@@ -35,3 +35,20 @@ export function formatSetValues(reps: number | null, weight: number | null): str
 export function formatSetsProgress(completedSets: number, totalSets: number): string {
   return `${completedSets} из ${totalSets} подходов`;
 }
+
+/**
+ * План упражнения: «3 × 8 × 60 кг · отдых 90 с». Незаданные части пропускаются:
+ * без повторов подходы подписываются («3 подх. × 60 кг»), чтобы число не читалось как повторы.
+ */
+export function formatExercisePlan(
+  sets: number,
+  reps: number | null,
+  weight: number | null,
+  restSeconds: number | null,
+): string {
+  const parts = [reps === null ? `${sets} подх.` : String(sets)];
+  if (reps !== null) parts.push(String(reps));
+  if (weight !== null) parts.push(`${weight} кг`);
+  const plan = parts.join(' × ');
+  return restSeconds === null ? plan : `${plan} · отдых ${restSeconds} с`;
+}

@@ -35,7 +35,7 @@ export function HistoryPage() {
                   className="flex items-center justify-between gap-3 rounded-xl border bg-card p-4 transition-colors hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                 >
                   <div className="min-w-0">
-                    <p className="text-lg font-semibold">{session.workoutNameSnapshot}</p>
+                    <p className="text-lg font-semibold wrap-anywhere">{session.workoutNameSnapshot}</p>
                     <p className="text-sm text-muted-foreground">{formatDateTime(session.startedAt)}</p>
                     <p className="text-sm text-muted-foreground">
                       {duration && `${duration} · `}

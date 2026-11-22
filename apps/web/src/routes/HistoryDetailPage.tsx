@@ -21,7 +21,7 @@ export function HistoryDetailPage() {
       <Link to="/history" className="inline-flex h-11 items-center gap-2 text-sm text-muted-foreground">
         <ArrowLeft className="size-4" aria-hidden /> История
       </Link>
-      <h1 className="text-2xl font-bold">{session?.workoutNameSnapshot ?? 'Занятие'}</h1>
+      <h1 className="text-2xl font-bold wrap-anywhere">{session?.workoutNameSnapshot ?? 'Занятие'}</h1>
 
       {query.isPending && (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -55,14 +55,14 @@ export function HistoryDetailPage() {
           {session.notes && (
             <Card className="gap-1 px-5">
               <p className="text-sm text-muted-foreground">Заметки к тренировке</p>
-              <p className="text-sm whitespace-pre-wrap">{session.notes}</p>
+              <p className="text-sm whitespace-pre-wrap wrap-anywhere">{session.notes}</p>
             </Card>
           )}
 
           {session.exercises.map((exercise) => (
             <Card key={exercise.exercisePosition} className="gap-3 px-5" data-testid="history-exercise">
               <div>
-                <h2 className={cn('text-lg font-semibold', exercise.isSkipped && 'text-muted-foreground')}>
+                <h2 className={cn('text-lg font-semibold wrap-anywhere', exercise.isSkipped && 'text-muted-foreground')}>
                   {exercise.name}
                 </h2>
                 {exercise.isSkipped && <p className="text-sm text-muted-foreground">Пропущено</p>}
@@ -83,7 +83,7 @@ export function HistoryDetailPage() {
                       </span>
                       {set.rpe !== null && <span className="text-muted-foreground">RPE {set.rpe}</span>}
                     </div>
-                    {set.notes && <p className="text-muted-foreground">{set.notes}</p>}
+                    {set.notes && <p className="text-muted-foreground whitespace-pre-wrap wrap-anywhere">{set.notes}</p>}
                   </li>
                 ))}
               </ul>

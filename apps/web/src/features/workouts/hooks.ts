@@ -22,7 +22,11 @@ export function useSaveWorkout(id?: string) {
   return useMutation({
     mutationFn: (input: WorkoutCreateInput | WorkoutUpdateInput) =>
       id === undefined ? api.createWorkout(input as WorkoutCreateInput) : api.updateWorkout(id, input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: workoutsKey }),
+    onSuccess: (saved) => {
+      // Просмотр после сохранения сразу показывает новые данные, без мелькания старых.
+      queryClient.setQueryData([...workoutsKey, saved.id], saved);
+      return queryClient.invalidateQueries({ queryKey: workoutsKey });
+    },
   });
 }
 
