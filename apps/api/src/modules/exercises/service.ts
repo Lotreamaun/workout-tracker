@@ -4,7 +4,9 @@ import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
 import { ERROR_CODES, MEDIA_LIMITS, exerciseNameKey, type Exercise, type ExerciseMedia } from '@wt/shared';
+import { and, eq, sql } from 'drizzle-orm';
 import type { Db } from '../../db/client';
+import { exercises } from '../../db/schema';
 import { AppError } from '../../plugins/errors';
 import {
   SNIFF_BYTES,
@@ -56,11 +58,19 @@ export function ensureExercises(tx: repo.DbOrTx, items: { name: string; descript
   const rows = new Map<string, { id: string; name: string; nameKey: string; description: string | null; createdAt: string }>();
   for (const item of items) {
     const nameKey = exerciseNameKey(item.name);
-    // Первое появление определяет отображаемое название и описание.
+    // Первое появление определяет отображаемое название; описание заполняется, если ещё не задано.
     if (nameKey && !rows.has(nameKey))
       rows.set(nameKey, { id: randomUUID(), name: item.name.trim(), nameKey, description: item.description, createdAt: now });
   }
   repo.insertExercisesIgnore(tx, [...rows.values()]);
+  // Дозаполняем описание у уже существующих записей библиотеки, если оно было пустым.
+  for (const item of items) {
+    const nameKey = exerciseNameKey(item.name);
+    if (!nameKey || !item.description) continue;
+    tx.update(exercises).set({ description: item.description })
+      .where(and(eq(exercises.nameKey, nameKey), sql`${exercises.description} IS NULL`))
+      .run();
+  }
 }
 
 /** Идемпотентное наполнение библиотеки названиями всех существующих шаблонов (при старте api). */
