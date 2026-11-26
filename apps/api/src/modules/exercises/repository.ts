@@ -71,3 +71,11 @@ export function listWorkoutExerciseNames(db: DbOrTx): string[] {
     .all()
     .map((row) => row.name);
 }
+
+export function listWorkoutExercisesForBackfill(db: DbOrTx): { name: string; description: string | null }[] {
+  return db
+    .select({ name: workoutExercises.name, description: workoutExercises.description })
+    .from(workoutExercises)
+    .orderBy(workoutExercises.workoutId, workoutExercises.position)
+    .all();
+}

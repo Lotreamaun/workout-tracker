@@ -73,14 +73,22 @@ export function ensureExercises(tx: repo.DbOrTx, items: { name: string; descript
   }
 }
 
-/** Идемпотентное наполнение библиотеки названиями всех существующих шаблонов (при старте api). */
+/** Идемпотентное наполнение библиотеки названиями и описаниями всех существующих шаблонов (при старте api). */
 export function backfillExercises(db: Db): void {
-  db.transaction((tx) =>
-    ensureExercises(
-      tx,
-      repo.listWorkoutExerciseNames(tx).map((name) => ({ name, description: null })),
-    ),
-  );
+  db.transaction((tx) => {
+    const byName = new Map<string, { name: string; description: string | null }>();
+    for (const { name, description } of repo.listWorkoutExercisesForBackfill(tx)) {
+      const nameKey = exerciseNameKey(name);
+      if (!nameKey) continue;
+      const existing = byName.get(nameKey);
+      if (!existing) {
+        byName.set(nameKey, { name: name.trim(), description });
+      } else if (!existing.description && description) {
+        existing.description = description;
+      }
+    }
+    ensureExercises(tx, [...byName.values()]);
+  });
 }
 
 /** Упражнения библиотеки с медиа по названиям: два запроса независимо от числа названий. */
