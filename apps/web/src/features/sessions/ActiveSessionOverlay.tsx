@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router';
 import { useSessions } from './hooks';
-import { useRestTimer } from './useRestTimer';
+import { useRestTimerNotification } from './useRestTimerNotification';
 import { formatRemaining } from './restTimer';
 import { formatSetsProgress } from './format';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ export function ActiveSessionOverlay() {
   const location = useLocation();
   const active = useSessions('in_progress', 1);
   const session = active.data?.[0];
-  const timer = useRestTimer(session?.id ?? '');
+  const timer = useRestTimerNotification(session?.id ?? '');
 
   if (!session) return null;
   if (location.pathname === `/sessions/${session.id}`) return null;

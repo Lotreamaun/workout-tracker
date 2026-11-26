@@ -2,6 +2,8 @@ import { Dumbbell, History, Home, Library, Sparkles, type LucideIcon } from 'luc
 import { NavLink, Outlet } from 'react-router';
 import { AccessKeyDialog } from '@/components/AccessKeyDialog';
 import { ActiveSessionOverlay } from '@/features/sessions/ActiveSessionOverlay';
+import { ToastContainer } from '@/components/ui/toast';
+import { ToastProvider } from '@/lib/use-toast';
 import { cn } from '@/lib/utils';
 
 const navItems: { to: string; label: string; icon: LucideIcon; end?: boolean }[] = [
@@ -14,7 +16,8 @@ const navItems: { to: string; label: string; icon: LucideIcon; end?: boolean }[]
 
 export function AppLayout() {
   return (
-    <div className="min-h-dvh md:flex">
+    <ToastProvider>
+      <div className="min-h-dvh md:flex">
       <aside className="hidden w-60 shrink-0 flex-col gap-1 border-r p-4 md:flex md:sticky md:top-0 md:h-dvh md:self-start md:overflow-y-auto">
         <div className="mb-4 flex items-center gap-2 px-3 py-2 text-lg font-semibold">
           <Dumbbell className="size-5 text-primary" aria-hidden />
@@ -73,7 +76,9 @@ export function AppLayout() {
       </nav>
 
       <ActiveSessionOverlay />
+      <ToastContainer />
       <AccessKeyDialog />
     </div>
+    </ToastProvider>
   );
 }
