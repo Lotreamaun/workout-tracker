@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router';
-import { useSessions } from './hooks';
+import { useSession, useSessions } from './hooks';
 import { useRestTimerNotification } from './useRestTimerNotification';
 import { formatRemaining } from './restTimer';
 import { formatSetsProgress } from './format';
@@ -9,6 +9,7 @@ export function ActiveSessionOverlay() {
   const location = useLocation();
   const active = useSessions('in_progress', 1);
   const session = active.data?.[0];
+  const fullSession = useSession(session?.id);
   const timer = useRestTimerNotification(session?.id ?? '');
 
   if (!session) return null;
@@ -17,7 +18,7 @@ export function ActiveSessionOverlay() {
   const { status, remainingMs, durationMs } = timer;
   const progress = durationMs > 0 ? Math.min(1, remainingMs / durationMs) : 0;
   const nextRest =
-    session.exercises.find(
+    fullSession.data?.exercises.find(
       (e) => !e.isSkipped && e.restSeconds !== null && e.sets.some((s) => !s.isCompleted),
     )?.restSeconds ?? null;
 
