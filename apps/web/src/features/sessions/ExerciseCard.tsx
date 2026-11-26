@@ -24,6 +24,9 @@ export function ExerciseCard({ exercise, disabled, onSaveSet, onToggleSkip, onSe
           <h2 className={cn('text-lg font-semibold wrap-anywhere', exercise.isSkipped && 'text-muted-foreground line-through')}>
             {exercise.name}
           </h2>
+          {exercise.description && (
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap wrap-anywhere">{exercise.description}</p>
+          )}
           <p className="text-sm text-muted-foreground">
             {exercise.isSkipped ? 'Пропущено' : `${done} из ${exercise.sets.length}`}
             {exercise.restSeconds !== null && ` · отдых ${exercise.restSeconds} с`}

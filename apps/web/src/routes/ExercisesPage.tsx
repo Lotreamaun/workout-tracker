@@ -65,7 +65,12 @@ export function ExercisesPage() {
                   <span className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted text-muted-foreground">
                     {firstMedia ? <MediaThumb media={firstMedia} /> : <ImageOff className="size-5" aria-hidden />}
                   </span>
-                  <span className="min-w-0 flex-1 wrap-anywhere">{exercise.name}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block wrap-anywhere">{exercise.name}</span>
+                    {exercise.description && (
+                      <span className="block truncate text-xs text-muted-foreground">{exercise.description}</span>
+                    )}
+                  </span>
                   {/* «медиа» — неизменяемое слово, форма одна для любого числа. */}
                   <span className="shrink-0 text-xs text-muted-foreground">
                     {firstMedia ? `${exercise.media.length} медиа` : 'Нет медиа'}

@@ -59,6 +59,7 @@ export const setLogs = sqliteTable(
       onDelete: 'set null',
     }),
     exerciseNameSnapshot: text('exercise_name_snapshot').notNull(),
+    description: text('description'),
     exercisePosition: integer('exercise_position').notNull(),
     setNumber: integer('set_number').notNull(),
     plannedReps: integer('planned_reps'),
@@ -80,6 +81,7 @@ export const exercises = sqliteTable('exercises', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   nameKey: text('name_key').notNull().unique(),
+  description: text('description'),
   createdAt: text('created_at').notNull(),
 });
 

@@ -43,7 +43,7 @@ function groupMedia(rows: repo.MediaRow[]): Map<string, ExerciseMedia[]> {
 
 function toExercises(rows: repo.ExerciseRow[], media: repo.MediaRow[]): Exercise[] {
   const byExercise = groupMedia(media);
-  return rows.map((row) => ({ id: row.id, name: row.name, media: byExercise.get(row.id) ?? [] }));
+  return rows.map((row) => ({ id: row.id, name: row.name, description: row.description, media: byExercise.get(row.id) ?? [] }));
 }
 
 function notFound(): never {
@@ -51,21 +51,26 @@ function notFound(): never {
 }
 
 /** Добавляет в библиотеку названия, которых там ещё нет (вызывать внутри транзакции записи шаблона). */
-export function ensureExercises(tx: repo.DbOrTx, names: string[]): void {
+export function ensureExercises(tx: repo.DbOrTx, items: { name: string; description: string | null }[]): void {
   const now = new Date().toISOString();
-  const rows = new Map<string, { id: string; name: string; nameKey: string; createdAt: string }>();
-  for (const name of names) {
-    const nameKey = exerciseNameKey(name);
-    // Первое появление определяет отображаемое название.
+  const rows = new Map<string, { id: string; name: string; nameKey: string; description: string | null; createdAt: string }>();
+  for (const item of items) {
+    const nameKey = exerciseNameKey(item.name);
+    // Первое появление определяет отображаемое название и описание.
     if (nameKey && !rows.has(nameKey))
-      rows.set(nameKey, { id: randomUUID(), name: name.trim(), nameKey, createdAt: now });
+      rows.set(nameKey, { id: randomUUID(), name: item.name.trim(), nameKey, description: item.description, createdAt: now });
   }
   repo.insertExercisesIgnore(tx, [...rows.values()]);
 }
 
 /** Идемпотентное наполнение библиотеки названиями всех существующих шаблонов (при старте api). */
 export function backfillExercises(db: Db): void {
-  db.transaction((tx) => ensureExercises(tx, repo.listWorkoutExerciseNames(tx)));
+  db.transaction((tx) =>
+    ensureExercises(
+      tx,
+      repo.listWorkoutExerciseNames(tx).map((name) => ({ name, description: null })),
+    ),
+  );
 }
 
 /** Упражнения библиотеки с медиа по названиям: два запроса независимо от числа названий. */
