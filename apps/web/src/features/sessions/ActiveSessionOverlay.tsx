@@ -16,6 +16,10 @@ export function ActiveSessionOverlay() {
 
   const { status, remainingMs, durationMs } = timer;
   const progress = durationMs > 0 ? Math.min(1, remainingMs / durationMs) : 0;
+  const nextRest =
+    session.exercises.find(
+      (e) => !e.isSkipped && e.restSeconds !== null && e.sets.some((s) => !s.isCompleted),
+    )?.restSeconds ?? null;
 
   return (
     <div
@@ -44,6 +48,15 @@ export function ActiveSessionOverlay() {
             <span className="inline-flex items-center rounded-full bg-primary/15 px-3 py-1 text-xs font-semibold text-primary">
               Отдых окончен
             </span>
+          )}
+          {status === 'idle' && nextRest !== null && (
+            <button
+              type="button"
+              onClick={() => timer.start(nextRest)}
+              className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground hover:bg-muted/80"
+            >
+              Отдых · запустить {nextRest} с
+            </button>
           )}
         </div>
         <Button asChild size="sm" className="h-11 shrink-0">
