@@ -1,6 +1,7 @@
 import { Dumbbell, History, Home, Library, Sparkles, type LucideIcon } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router';
 import { AccessKeyDialog } from '@/components/AccessKeyDialog';
+import { ActiveSessionOverlay } from '@/features/sessions/ActiveSessionOverlay';
 import { cn } from '@/lib/utils';
 
 const navItems: { to: string; label: string; icon: LucideIcon; end?: boolean }[] = [
@@ -71,6 +72,7 @@ export function AppLayout() {
         ))}
       </nav>
 
+      <ActiveSessionOverlay />
       <AccessKeyDialog />
     </div>
   );
