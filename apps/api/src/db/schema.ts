@@ -97,3 +97,26 @@ export const exerciseMedia = sqliteTable(
   },
   (table) => [index('exercise_media_exercise_created_idx').on(table.exerciseId, table.createdAt)],
 );
+
+// Подписка Web Push на устройстве: одна на endpoint; таймер отдыха — один возможный срок на подписку.
+// Ревизия сохраняется в БД и переживает перезапуск; захваченный срок (timer_captured_at) отправляется
+// прямо сейчас и уже не отменяется.
+export const restPushSubscriptions = sqliteTable(
+  'rest_push_subscriptions',
+  {
+    id: text('id').primaryKey(),
+    endpoint: text('endpoint').notNull().unique(),
+    p256dh: text('p256dh').notNull(),
+    auth: text('auth').notNull(),
+    timerSessionId: text('timer_session_id'),
+    timerEndsAt: text('timer_ends_at'),
+    timerCapturedAt: text('timer_captured_at'),
+    /** Ревизия последнего применённого изменения таймера; повторы и запоздалые запросы игнорируются. */
+    lastRevision: integer('last_revision').notNull().default(0),
+    /** Срок последней реально отправленной доставки: его повторное планирование запрещено. */
+    lastSentEndsAt: text('last_sent_ends_at'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [index('rest_push_subscriptions_timer_ends_at_idx').on(table.timerEndsAt)],
+);

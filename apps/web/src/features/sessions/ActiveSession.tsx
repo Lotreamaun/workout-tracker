@@ -5,12 +5,13 @@ import type { Session, SessionExercise } from '@wt/shared';
 import { Button } from '@/components/ui/button';
 import { AutoTextarea } from '@/components/ui/auto-textarea';
 import { formatSaveError } from '@/features/workouts/formatError';
+import { RestPushControl } from '@/features/rest-push/RestPushControl';
 import { ConfirmDialog } from './ConfirmDialog';
 import { ExerciseCard } from './ExerciseCard';
 import { RestTimer } from './RestTimerPanel';
 import { formatTime } from './format';
 import { useAbandonSession, useCompleteSession, useSaveSession } from './hooks';
-import type { RestTimerApi } from './useRestTimer';
+import type { ActiveSessionContext } from './useRestTimer';
 
 const NOTES_DEBOUNCE_MS = 600;
 const DEFAULT_REST_SECONDS = 90;
@@ -24,7 +25,7 @@ export function ActiveSession({ session }: ActiveSessionProps) {
   const { save, error: saveError, clearError } = useSaveSession(session.id);
   const complete = useCompleteSession(session.id);
   const abandon = useAbandonSession(session.id);
-  const timer = useOutletContext<RestTimerApi>();
+  const { timer, restPush } = useOutletContext<ActiveSessionContext>();
 
   const [notes, setNotes] = useState(session.notes ?? '');
   const [seenNotes, setSeenNotes] = useState(session.notes);
@@ -63,6 +64,8 @@ export function ActiveSession({ session }: ActiveSessionProps) {
   return (
     <div className="space-y-4 pb-24">
       <p className="text-sm text-muted-foreground">Начата в {formatTime(session.startedAt)}</p>
+
+      <RestPushControl restPush={restPush} timer={timer} />
 
       {saveError && (
         <div

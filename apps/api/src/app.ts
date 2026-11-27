@@ -11,6 +11,14 @@ import { exerciseRoutes } from './modules/exercises/routes';
 import { backfillExercises } from './modules/exercises/service';
 import { exchangeRoutes } from './modules/exchange/routes';
 import { healthRoutes } from './modules/health/routes';
+import { restPushRoutes } from './modules/rest-push/routes';
+import type { VapidConfig } from './modules/rest-push/transport';
+import { createWebPushTransport } from './modules/rest-push/transport';
+import {
+  REST_PUSH_DEFAULT_POLL_INTERVAL_MS,
+  RestPushWorker,
+  type RestPushTransport,
+} from './modules/rest-push/worker';
 import { sessionRoutes } from './modules/sessions/routes';
 import { workoutRoutes } from './modules/workouts/routes';
 
@@ -34,6 +42,12 @@ export interface BuildAppOptions {
   mediaMaxUploadBytes?: number;
   corsOrigins?: string[];
   corsAllowPrivateNetwork?: boolean;
+  /** VAPID-ключи Web Push; фича включается только вместе с apiToken. */
+  vapid?: VapidConfig;
+  /** Транспорт доставки Web Push (подставной в тестах); по умолчанию web-push. */
+  restPushTransport?: RestPushTransport;
+  /** Интервал цикла отправки в мс (тесты); по умолчанию 1 с. */
+  restPushPollIntervalMs?: number;
   logger?: boolean;
 }
 
@@ -49,6 +63,9 @@ export function buildApp({
   mediaMaxUploadBytes,
   corsOrigins = [],
   corsAllowPrivateNetwork = false,
+  vapid,
+  restPushTransport,
+  restPushPollIntervalMs,
   logger = false,
 }: BuildAppOptions) {
   const app = Fastify({ logger });
@@ -90,8 +107,29 @@ export function buildApp({
   app.register(sessionRoutes(db), { prefix: '/api' });
   app.register(exchangeRoutes(db), { prefix: '/api' });
   app.register(exerciseRoutes(db, media, { maxUploadBytes: mediaMaxUploadBytes }), { prefix: '/api' });
+  // Маршруты Web Push регистрируются всегда: без конфигурации config отдаёт publicKey: null, записи — 503.
+  // CRUD подписки включается лишь при конфигурации VAPID и действующей защите API.
+  const restPushVapid = apiToken && vapid ? vapid : undefined;
+  const restPushEnabled = Boolean(restPushVapid);
+  app.register(
+    restPushRoutes(db, { enabled: restPushEnabled, publicKey: restPushVapid?.publicKey ?? null }),
+    { prefix: '/api' },
+  );
+  const restPushWorker = restPushVapid
+    ? new RestPushWorker(
+        db,
+        restPushTransport ?? createWebPushTransport(restPushVapid),
+        restPushPollIntervalMs ?? REST_PUSH_DEFAULT_POLL_INTERVAL_MS,
+        app.log,
+      )
+    : undefined;
+  app.addHook('onReady', async () => {
+    restPushWorker?.start();
+  });
 
   app.addHook('onClose', async () => {
+    // Цикл прекращает брать задачи и дожидается текущей отправки до закрытия SQLite.
+    await restPushWorker?.stop();
     sqlite.close();
   });
 

@@ -93,7 +93,7 @@ export async function apiRequest<T>(path: string, schema: ZodType<T>, init?: Req
   return parsed.data;
 }
 
-function jsonBody(method: 'POST' | 'PATCH', body: unknown): RequestInit {
+export function jsonBody(method: 'POST' | 'PATCH', body: unknown): RequestInit {
   return { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
 }
 

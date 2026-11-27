@@ -1,8 +1,14 @@
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+
+const pushWorkerRevision = createHash('sha256')
+  .update(readFileSync(new URL('./public/rest-push-sw.js', import.meta.url)))
+  .digest('hex').slice(0, 12);
 
 export default defineConfig({
   plugins: [
@@ -30,6 +36,12 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        // Обработчики push/notificationclick лежат отдельным файлом из public/:
+        // generateSW сохраняет регистрацию, precache и кэширование, importScripts
+        // лишь подключает файл к сгенерированному воркеру.
+        importScripts: [`rest-push-sw.js?v=${pushWorkerRevision}`],
+        // Файл обработчиков раздаётся напрямую и не участвует в precache.
+        globIgnores: ['**/rest-push-sw.js'],
         navigateFallbackDenylist: [/^\/api\//, /^\/media\//],
         // Данные тренировок не кэшируются: любые запросы к /api идут только в сеть.
         runtimeCaching: [{ urlPattern: /\/api\//, handler: 'NetworkOnly' }],

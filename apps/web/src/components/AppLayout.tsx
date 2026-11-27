@@ -4,7 +4,8 @@ import { AccessKeyDialog } from '@/components/AccessKeyDialog';
 import { ActiveSessionOverlay } from '@/features/sessions/ActiveSessionOverlay';
 import { useSession, useSessions } from '@/features/sessions/hooks';
 import { RestTimerNotification } from '@/features/sessions/RestTimerNotification';
-import { useRestTimer } from '@/features/sessions/useRestTimer';
+import { useRestTimer, type ActiveSessionContext } from '@/features/sessions/useRestTimer';
+import { useRestPush } from '@/features/rest-push/useRestPush';
 import { cn } from '@/lib/utils';
 
 const navItems: { to: string; label: string; icon: LucideIcon; end?: boolean }[] = [
@@ -21,7 +22,9 @@ export function AppLayout() {
   const routeSession = useSession(routeSessionId).data;
   const currentSession = routeSession?.status === 'in_progress' ? routeSession : activeSession;
   const sessionId = currentSession?.id;
-  const timer = useRestTimer(sessionId);
+  const restPush = useRestPush(sessionId);
+  // Ручные изменения таймера уходят на сервер уведомлений независимо от маршрута.
+  const timer = useRestTimer(sessionId, { onTimerChange: restPush.onTimerChange });
   const showOverlay = activeSession && activeSession.id !== routeSessionId;
 
   return (
@@ -58,7 +61,7 @@ export function AppLayout() {
       />
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-4 md:px-8 md:pb-10">
-        <Outlet context={timer} />
+        <Outlet context={{ timer, restPush } satisfies ActiveSessionContext} />
       </main>
 
       <div className="sticky bottom-0 z-40 md:hidden">
