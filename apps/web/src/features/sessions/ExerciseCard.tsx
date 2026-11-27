@@ -24,9 +24,6 @@ export function ExerciseCard({ exercise, disabled, onSaveSet, onToggleSkip, onSe
           <h2 className={cn('text-lg font-semibold wrap-anywhere', exercise.isSkipped && 'text-muted-foreground line-through')}>
             {exercise.name}
           </h2>
-          {exercise.description && (
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap wrap-anywhere">{exercise.description}</p>
-          )}
           <p className="text-sm text-muted-foreground">
             {exercise.isSkipped ? 'Пропущено' : `${done} из ${exercise.sets.length}`}
             {exercise.restSeconds !== null && ` · отдых ${exercise.restSeconds} с`}
@@ -43,6 +40,17 @@ export function ExerciseCard({ exercise, disabled, onSaveSet, onToggleSkip, onSe
           {exercise.isSkipped ? 'Вернуть' : 'Пропустить'}
         </Button>
       </div>
+
+      {exercise.description && (
+        <details className="rounded-lg border bg-muted/30">
+          <summary className="min-h-11 cursor-pointer px-3 py-3 text-sm font-medium">
+            Описание упражнения
+          </summary>
+          <p className="px-3 pb-3 text-sm text-muted-foreground whitespace-pre-wrap wrap-anywhere">
+            {exercise.description}
+          </p>
+        </details>
+      )}
 
       <MediaStrip title={exercise.name} media={exercise.media} />
 

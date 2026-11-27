@@ -4,9 +4,7 @@ import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
 import { ERROR_CODES, MEDIA_LIMITS, exerciseNameKey, type Exercise, type ExerciseMedia } from '@wt/shared';
-import { and, eq, sql } from 'drizzle-orm';
 import type { Db } from '../../db/client';
-import { exercises } from '../../db/schema';
 import { AppError } from '../../plugins/errors';
 import {
   SNIFF_BYTES,
@@ -52,43 +50,34 @@ function notFound(): never {
   throw new AppError(ERROR_CODES.NOT_FOUND, 404, 'Упражнение не найдено');
 }
 
-/** Добавляет в библиотеку названия, которых там ещё нет (вызывать внутри транзакции записи шаблона). */
+/** Сохраняет первое имя и первое непустое описание внутри транзакции записи шаблона. */
 export function ensureExercises(tx: repo.DbOrTx, items: { name: string; description: string | null }[]): void {
   const now = new Date().toISOString();
-  const rows = new Map<string, { id: string; name: string; nameKey: string; description: string | null; createdAt: string }>();
+  const rows = new Map<string, {
+    id: string; name: string; nameKey: string; description: string | null; createdAt: string;
+  }>();
+
   for (const item of items) {
     const nameKey = exerciseNameKey(item.name);
-    // Первое появление определяет отображаемое название; описание заполняется, если ещё не задано.
-    if (nameKey && !rows.has(nameKey))
-      rows.set(nameKey, { id: randomUUID(), name: item.name.trim(), nameKey, description: item.description, createdAt: now });
+    if (!nameKey) continue;
+    const description = item.description?.trim() || null;
+    const row = rows.get(nameKey);
+    if (!row) {
+      rows.set(nameKey, { id: randomUUID(), name: item.name.trim(), nameKey, description, createdAt: now });
+    } else if (row.description === null) {
+      row.description = description;
+    }
   }
+
   repo.insertExercisesIgnore(tx, [...rows.values()]);
-  // Дозаполняем описание у уже существующих записей библиотеки, если оно было пустым.
-  for (const item of items) {
-    const nameKey = exerciseNameKey(item.name);
-    if (!nameKey || !item.description) continue;
-    tx.update(exercises).set({ description: item.description })
-      .where(and(eq(exercises.nameKey, nameKey), sql`${exercises.description} IS NULL`))
-      .run();
+  for (const row of rows.values()) {
+    if (row.description !== null) repo.fillExerciseDescription(tx, row.nameKey, row.description);
   }
 }
 
-/** Идемпотентное наполнение библиотеки названиями и описаниями всех существующих шаблонов (при старте api). */
+/** Восстанавливает недостающие записи и описания из существующих шаблонов при старте API. */
 export function backfillExercises(db: Db): void {
-  db.transaction((tx) => {
-    const byName = new Map<string, { name: string; description: string | null }>();
-    for (const { name, description } of repo.listWorkoutExercisesForBackfill(tx)) {
-      const nameKey = exerciseNameKey(name);
-      if (!nameKey) continue;
-      const existing = byName.get(nameKey);
-      if (!existing) {
-        byName.set(nameKey, { name: name.trim(), description });
-      } else if (!existing.description && description) {
-        existing.description = description;
-      }
-    }
-    ensureExercises(tx, [...byName.values()]);
-  });
+  db.transaction((tx) => ensureExercises(tx, repo.listWorkoutExercisesForBackfill(tx)));
 }
 
 /** Упражнения библиотеки с медиа по названиям: два запроса независимо от числа названий. */

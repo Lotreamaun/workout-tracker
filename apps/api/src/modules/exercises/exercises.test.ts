@@ -102,6 +102,50 @@ describe('библиотека упражнений (API)', () => {
     expect((await getWorkout(second.id)).exercises[0]?.exerciseId).toBe(items[0]?.id);
   });
 
+  it('запоминает первое непустое описание и учитывает нормализацию имени', async () => {
+    await createWorkout('Первая', ['Жим лёжа']);
+    for (const description of ['Техника из второго шаблона', 'Техника из третьего шаблона']) {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/workouts',
+        payload: { name: description, exercises: [{ name: ' жим  лежа ', description, plannedSets: 2 }] },
+      });
+      expect(res.statusCode).toBe(201);
+    }
+
+    const items = await library();
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ name: 'Жим лёжа', description: 'Техника из второго шаблона' });
+    const res = await app.inject({ method: 'GET', url: `/api/exercises/${items[0]!.id}` });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ description: 'Техника из второго шаблона' });
+  });
+
+  it('при запуске берёт описание из самого раннего шаблона', async () => {
+    await createWorkout('Первая', ['Жим лёжа']);
+    await app.close();
+
+    const sqlite = new Database(dbPath);
+    try {
+      const insertWorkout = sqlite.prepare('INSERT INTO workouts (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)');
+      const insertExercise = sqlite.prepare(
+        'INSERT INTO workout_exercises (id, workout_id, name, description, position, planned_sets, created_at, updated_at) VALUES (?, ?, ?, ?, 0, 2, ?, ?)',
+      );
+      for (const [id, date, description] of [
+        ['a-newer', '2026-11-02T00:00:00.000Z', 'Более позднее описание'],
+        ['z-older', '2026-11-01T00:00:00.000Z', 'Самое раннее описание'],
+      ] as const) {
+        insertWorkout.run(id, id, date, date);
+        insertExercise.run(id, id, 'жим лежа', description, date, date);
+      }
+    } finally {
+      sqlite.close();
+    }
+
+    app = buildApp({ dbPath });
+    expect(await library()).toMatchObject([{ name: 'Жим лёжа', description: 'Самое раннее описание' }]);
+  });
+
   it('импорт в режиме add добавляет упражнения в библиотеку', async () => {
     const data: ExchangeDocument = {
       schemaVersion: EXCHANGE_SCHEMA_VERSION,

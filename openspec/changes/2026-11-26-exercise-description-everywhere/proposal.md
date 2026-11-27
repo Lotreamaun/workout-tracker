@@ -6,9 +6,10 @@
 
 - `packages/shared`: `Exercise.description` и `SessionExercise.description` добавляются в Zod-схемы и выводимые типы.
 - БД: новая миграция добавляет колонку `description text` в таблицы `exercises` (библиотека) и `set_logs` (снэпшот упражнения сессии).
-- API exercises: `ensureExercises` принимает пары название+описание (первое появление записывает и то, и другое); `toExercises` отдаёт `description` в `GET /api/exercises` и `GET /api/exercises/:id`.
+- API exercises: `ensureExercises` принимает пары название+описание (имя берётся из первого появления, описание — первое непустое); `toExercises` отдаёт `description` в `GET /api/exercises` и `GET /api/exercises/:id`.
+- При старте API пустые описания библиотеки заполняются из существующих шаблонов по дате создания шаблона. Уже записанные описания сохраняются.
 - API sessions: `startSession` пишет `exercise.description` в `set_logs.description` при старте; `toSession` отдаёт `exercises[].description`. Редактирование шаблона не меняет снэпшоты существующих сессий.
-- UI: карточка библиотеки на `/exercises`, `ExerciseDetailPage` и `ExerciseCard` во время сессии показывают описание под названием (если задано).
+- UI: карточка библиотеки на `/exercises`, `ExerciseDetailPage` показывают описание под названием. Во время сессии описание открывается по кнопке «Описание упражнения».
 
 ## Capabilities
 
