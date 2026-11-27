@@ -1,25 +1,22 @@
-import { Link, useLocation } from 'react-router';
-import { useSessions } from './hooks';
-import { useRestTimerNotification } from './useRestTimerNotification';
+import { Link } from 'react-router';
+import type { SessionListItem } from '@wt/shared';
+import type { RestTimerApi } from './useRestTimer';
 import { formatRemaining } from './restTimer';
 import { formatSetsProgress } from './format';
 import { Button } from '@/components/ui/button';
 
-export function ActiveSessionOverlay() {
-  const location = useLocation();
-  const active = useSessions('in_progress', 1);
-  const session = active.data?.[0];
-  const timer = useRestTimerNotification(session?.id ?? '');
+interface ActiveSessionOverlayProps {
+  session: SessionListItem;
+  timer: Pick<RestTimerApi, 'status' | 'remainingMs' | 'durationMs'>;
+}
 
-  if (!session) return null;
-  if (location.pathname === `/sessions/${session.id}`) return null;
-
+export function ActiveSessionOverlay({ session, timer }: ActiveSessionOverlayProps) {
   const { status, remainingMs, durationMs } = timer;
   const progress = durationMs > 0 ? Math.min(1, remainingMs / durationMs) : 0;
 
   return (
     <div
-      className="fixed inset-x-2 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-50 rounded-t-xl border bg-card/95 px-4 py-3 shadow-lg backdrop-blur md:hidden"
+      className="mx-2 rounded-t-xl border bg-card/95 px-4 py-3 shadow-lg backdrop-blur"
       role="region"
       aria-label="Активная тренировка"
     >
@@ -45,11 +42,6 @@ export function ActiveSessionOverlay() {
               Отдых окончен
             </span>
           )}
-          {status === 'idle' && (
-            <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-              Отдых
-            </span>
-          )}
         </div>
         <Button asChild size="sm" className="h-11 shrink-0">
           <Link to={`/sessions/${session.id}`}>К тренировке</Link>
@@ -58,5 +50,3 @@ export function ActiveSessionOverlay() {
     </div>
   );
 }
-
-export default ActiveSessionOverlay;
