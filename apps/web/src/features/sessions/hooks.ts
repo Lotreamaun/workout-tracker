@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Session, SessionPatchInput, SessionStatus } from '@wt/shared';
+import type { Session, SessionListItem, SessionPatchInput, SessionStatus } from '@wt/shared';
 import { api } from '@/lib/api';
 import { formatSaveError } from '@/features/workouts/formatError';
 import { applySessionPatch } from './applyPatch';
 
 const sessionsKey = ['sessions'] as const;
 const sessionKey = (id: string) => [...sessionsKey, 'detail', id] as const;
+const listKey = (status: SessionStatus, limit: number) => [...sessionsKey, 'list', status, limit] as const;
+const activeListKey = listKey('in_progress', 1);
 
 export function useSessions(status: SessionStatus, limit: number) {
   return useQuery({
-    queryKey: [...sessionsKey, 'list', status, limit],
+    queryKey: listKey(status, limit),
     queryFn: () => api.listSessions(status, limit),
   });
 }
@@ -29,6 +31,15 @@ export function useStartSession() {
     mutationFn: (workoutId: string) => api.startSession(workoutId),
     onSuccess: (session) => {
       queryClient.setQueryData(sessionKey(session.id), session);
+      const { id, workoutId, workoutNameSnapshot, status, startedAt, completedAt } = session;
+      const sets = session.exercises.flatMap((exercise) => exercise.sets);
+      queryClient.setQueryData<SessionListItem[]>(activeListKey, [
+        {
+          id, workoutId, workoutNameSnapshot, status, startedAt, completedAt,
+          completedSets: sets.filter((set) => set.isCompleted).length,
+          totalSets: sets.length,
+        },
+      ]);
       void queryClient.invalidateQueries({ queryKey: [...sessionsKey, 'list'] });
     },
   });
@@ -77,6 +88,7 @@ export function useCompleteSession(sessionId: string) {
     mutationFn: (notes?: string | null) => api.completeSession(sessionId, notes === undefined ? {} : { notes }),
     onSuccess: (session) => {
       queryClient.setQueryData(sessionKey(sessionId), session);
+      queryClient.setQueryData<SessionListItem[]>(activeListKey, (items) => items?.filter((item) => item.id !== sessionId));
       void queryClient.invalidateQueries({ queryKey: [...sessionsKey, 'list'] });
       void queryClient.invalidateQueries({ queryKey: ['workouts'] });
     },
@@ -90,6 +102,7 @@ export function useAbandonSession(sessionId: string) {
     mutationFn: () => api.patchSession(sessionId, { status: 'abandoned' }),
     onSuccess: (session) => {
       queryClient.setQueryData(sessionKey(sessionId), session);
+      queryClient.setQueryData<SessionListItem[]>(activeListKey, (items) => items?.filter((item) => item.id !== sessionId));
       void queryClient.invalidateQueries({ queryKey: [...sessionsKey, 'list'] });
     },
   });
