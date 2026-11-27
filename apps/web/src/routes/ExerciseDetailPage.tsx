@@ -15,6 +15,9 @@ export function ExerciseDetailPage() {
         <ArrowLeft className="size-4" aria-hidden /> Упражнения
       </Link>
       <h1 className="text-2xl font-bold wrap-anywhere">{exercise.data?.name ?? 'Упражнение'}</h1>
+      {exercise.data?.description && (
+        <p className="text-sm text-muted-foreground whitespace-pre-wrap wrap-anywhere">{exercise.data.description}</p>
+      )}
 
       {exercise.isPending && (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">

@@ -1,6 +1,11 @@
 import { Dumbbell, History, Home, Library, Sparkles, type LucideIcon } from 'lucide-react';
-import { NavLink, Outlet } from 'react-router';
+import { NavLink, Outlet, useMatch } from 'react-router';
 import { AccessKeyDialog } from '@/components/AccessKeyDialog';
+import { ActiveSessionOverlay } from '@/features/sessions/ActiveSessionOverlay';
+import { useSession, useSessions } from '@/features/sessions/hooks';
+import { RestTimerNotification } from '@/features/sessions/RestTimerNotification';
+import { useRestTimer, type ActiveSessionContext } from '@/features/sessions/useRestTimer';
+import { useRestPush } from '@/features/rest-push/useRestPush';
 import { cn } from '@/lib/utils';
 
 const navItems: { to: string; label: string; icon: LucideIcon; end?: boolean }[] = [
@@ -12,8 +17,18 @@ const navItems: { to: string; label: string; icon: LucideIcon; end?: boolean }[]
 ];
 
 export function AppLayout() {
+  const routeSessionId = useMatch('/sessions/:id')?.params.id;
+  const activeSession = useSessions('in_progress', 1).data?.[0];
+  const routeSession = useSession(routeSessionId).data;
+  const currentSession = routeSession?.status === 'in_progress' ? routeSession : activeSession;
+  const sessionId = currentSession?.id;
+  const restPush = useRestPush(sessionId);
+  // Ручные изменения таймера уходят на сервер уведомлений независимо от маршрута.
+  const timer = useRestTimer(sessionId, { onTimerChange: restPush.onTimerChange });
+  const showOverlay = activeSession && activeSession.id !== routeSessionId;
+
   return (
-    <div className="min-h-dvh md:flex">
+    <div className="flex min-h-dvh flex-col md:flex-row">
       <aside className="hidden w-60 shrink-0 flex-col gap-1 border-r p-4 md:flex md:sticky md:top-0 md:h-dvh md:self-start md:overflow-y-auto">
         <div className="mb-4 flex items-center gap-2 px-3 py-2 text-lg font-semibold">
           <Dumbbell className="size-5 text-primary" aria-hidden />
@@ -45,32 +60,43 @@ export function AppLayout() {
         className="pointer-events-none fixed inset-x-0 top-0 z-50 h-[env(safe-area-inset-top)] bg-background md:hidden"
       />
 
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-28 md:px-8 md:pb-10">
-        <Outlet />
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-4 md:px-8 md:pb-10">
+        <Outlet context={{ timer, restPush } satisfies ActiveSessionContext} />
       </main>
 
-      <nav
-        aria-label="Основная навигация"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
-      >
-        {navItems.map(({ to, label, icon: Icon, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) =>
-              cn(
-                'flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors',
-                isActive ? 'text-primary' : 'text-muted-foreground',
-              )
-            }
-          >
-            <Icon className="size-6" aria-hidden />
-            {label}
-          </NavLink>
-        ))}
-      </nav>
-
+      <div className="sticky bottom-0 z-40 md:hidden">
+        {showOverlay && <ActiveSessionOverlay session={activeSession} timer={timer} />}
+        <nav
+          aria-label="Основная навигация"
+          className="grid grid-cols-5 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
+        >
+          {navItems.map(({ to, label, icon: Icon, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                cn(
+                  'flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors',
+                  isActive ? 'text-primary' : 'text-muted-foreground',
+                )
+              }
+            >
+              <Icon className="size-6" aria-hidden />
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+      </div>
+      {currentSession && (
+        <RestTimerNotification
+          key={currentSession.id}
+          sessionId={currentSession.id}
+          workoutName={currentSession.workoutNameSnapshot}
+          status={timer.status}
+          onSessionPage={currentSession.id === routeSessionId}
+        />
+      )}
       <AccessKeyDialog />
     </div>
   );

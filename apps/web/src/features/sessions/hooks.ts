@@ -1,26 +1,66 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Session, SessionPatchInput, SessionStatus } from '@wt/shared';
+import type { Session, SessionListItem, SessionPatchInput, SessionStatus } from '@wt/shared';
 import { api } from '@/lib/api';
 import { formatSaveError } from '@/features/workouts/formatError';
 import { applySessionPatch } from './applyPatch';
 
 const sessionsKey = ['sessions'] as const;
 const sessionKey = (id: string) => [...sessionsKey, 'detail', id] as const;
+const listKey = (status: SessionStatus, limit: number) => [...sessionsKey, 'list', status, limit] as const;
+const activeListKey = listKey('in_progress', 1);
+
+/** Краткая карточка сессии для списков, собранная из детальной сессии. */
+export function sessionToListItem(session: Session): SessionListItem {
+  const sets = session.exercises.flatMap((exercise) => exercise.sets);
+  return {
+    id: session.id,
+    workoutId: session.workoutId,
+    workoutNameSnapshot: session.workoutNameSnapshot,
+    status: session.status,
+    startedAt: session.startedAt,
+    completedAt: session.completedAt,
+    completedSets: sets.filter((set) => set.isCompleted).length,
+    totalSets: sets.length,
+  };
+}
+
+/** Возвращает обновление кэша, если оно нужно. undefined пропускает запись. */
+export function syncActiveList(
+  items: SessionListItem[] | undefined,
+  session: Session,
+): SessionListItem[] | undefined {
+  if (session.status === 'in_progress' && items === undefined) return [sessionToListItem(session)];
+  if (session.status !== 'in_progress' && items?.some((item) => item.id === session.id)) {
+    return items.filter((item) => item.id !== session.id);
+  }
+  return undefined;
+}
 
 export function useSessions(status: SessionStatus, limit: number) {
   return useQuery({
-    queryKey: [...sessionsKey, 'list', status, limit],
+    queryKey: listKey(status, limit),
     queryFn: () => api.listSessions(status, limit),
   });
 }
 
 export function useSession(id: string | undefined) {
-  return useQuery({
+  const queryClient = useQueryClient();
+  const query = useQuery({
     queryKey: sessionKey(id ?? ''),
     queryFn: () => api.getSession(id!),
     enabled: id !== undefined,
   });
+
+  // Деталь нужна для перехода со страницы сессии, пока список ещё загружается.
+  // Заполненный список может содержать более свежие сведения, чем кэш детали.
+  const session = query.data;
+  useEffect(() => {
+    if (!session) return;
+    queryClient.setQueryData<SessionListItem[]>(activeListKey, (items) => syncActiveList(items, session));
+  }, [queryClient, session]);
+
+  return query;
 }
 
 export function useStartSession() {
@@ -29,6 +69,7 @@ export function useStartSession() {
     mutationFn: (workoutId: string) => api.startSession(workoutId),
     onSuccess: (session) => {
       queryClient.setQueryData(sessionKey(session.id), session);
+      queryClient.setQueryData<SessionListItem[]>(activeListKey, [sessionToListItem(session)]);
       void queryClient.invalidateQueries({ queryKey: [...sessionsKey, 'list'] });
     },
   });
@@ -77,6 +118,7 @@ export function useCompleteSession(sessionId: string) {
     mutationFn: (notes?: string | null) => api.completeSession(sessionId, notes === undefined ? {} : { notes }),
     onSuccess: (session) => {
       queryClient.setQueryData(sessionKey(sessionId), session);
+      queryClient.setQueryData<SessionListItem[]>(activeListKey, (items) => items?.filter((item) => item.id !== sessionId));
       void queryClient.invalidateQueries({ queryKey: [...sessionsKey, 'list'] });
       void queryClient.invalidateQueries({ queryKey: ['workouts'] });
     },
@@ -90,6 +132,7 @@ export function useAbandonSession(sessionId: string) {
     mutationFn: () => api.patchSession(sessionId, { status: 'abandoned' }),
     onSuccess: (session) => {
       queryClient.setQueryData(sessionKey(sessionId), session);
+      queryClient.setQueryData<SessionListItem[]>(activeListKey, (items) => items?.filter((item) => item.id !== sessionId));
       void queryClient.invalidateQueries({ queryKey: [...sessionsKey, 'list'] });
     },
   });

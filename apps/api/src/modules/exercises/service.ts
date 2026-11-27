@@ -43,29 +43,41 @@ function groupMedia(rows: repo.MediaRow[]): Map<string, ExerciseMedia[]> {
 
 function toExercises(rows: repo.ExerciseRow[], media: repo.MediaRow[]): Exercise[] {
   const byExercise = groupMedia(media);
-  return rows.map((row) => ({ id: row.id, name: row.name, media: byExercise.get(row.id) ?? [] }));
+  return rows.map((row) => ({ id: row.id, name: row.name, description: row.description, media: byExercise.get(row.id) ?? [] }));
 }
 
 function notFound(): never {
   throw new AppError(ERROR_CODES.NOT_FOUND, 404, 'Упражнение не найдено');
 }
 
-/** Добавляет в библиотеку названия, которых там ещё нет (вызывать внутри транзакции записи шаблона). */
-export function ensureExercises(tx: repo.DbOrTx, names: string[]): void {
+/** Сохраняет первое имя и первое непустое описание внутри транзакции записи шаблона. */
+export function ensureExercises(tx: repo.DbOrTx, items: { name: string; description: string | null }[]): void {
   const now = new Date().toISOString();
-  const rows = new Map<string, { id: string; name: string; nameKey: string; createdAt: string }>();
-  for (const name of names) {
-    const nameKey = exerciseNameKey(name);
-    // Первое появление определяет отображаемое название.
-    if (nameKey && !rows.has(nameKey))
-      rows.set(nameKey, { id: randomUUID(), name: name.trim(), nameKey, createdAt: now });
+  const rows = new Map<string, {
+    id: string; name: string; nameKey: string; description: string | null; createdAt: string;
+  }>();
+
+  for (const item of items) {
+    const nameKey = exerciseNameKey(item.name);
+    if (!nameKey) continue;
+    const description = item.description?.trim() || null;
+    const row = rows.get(nameKey);
+    if (!row) {
+      rows.set(nameKey, { id: randomUUID(), name: item.name.trim(), nameKey, description, createdAt: now });
+    } else if (row.description === null) {
+      row.description = description;
+    }
   }
+
   repo.insertExercisesIgnore(tx, [...rows.values()]);
+  for (const row of rows.values()) {
+    if (row.description !== null) repo.fillExerciseDescription(tx, row.nameKey, row.description);
+  }
 }
 
-/** Идемпотентное наполнение библиотеки названиями всех существующих шаблонов (при старте api). */
+/** Восстанавливает недостающие записи и описания из существующих шаблонов при старте API. */
 export function backfillExercises(db: Db): void {
-  db.transaction((tx) => ensureExercises(tx, repo.listWorkoutExerciseNames(tx)));
+  db.transaction((tx) => ensureExercises(tx, repo.listWorkoutExercisesForBackfill(tx)));
 }
 
 /** Упражнения библиотеки с медиа по названиям: два запроса независимо от числа названий. */

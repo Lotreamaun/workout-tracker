@@ -22,6 +22,7 @@ export const exerciseMediaSchema = z.object({
 export const exerciseSchema = z.object({
   id: z.string(),
   name: z.string(),
+  description: z.string().nullable(),
   media: z.array(exerciseMediaSchema),
 });
 

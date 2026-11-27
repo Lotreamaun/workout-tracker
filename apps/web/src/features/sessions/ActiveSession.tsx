@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { CircleAlert } from 'lucide-react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useOutletContext } from 'react-router';
 import type { Session, SessionExercise } from '@wt/shared';
 import { Button } from '@/components/ui/button';
 import { AutoTextarea } from '@/components/ui/auto-textarea';
 import { formatSaveError } from '@/features/workouts/formatError';
+import { RestPushControl } from '@/features/rest-push/RestPushControl';
 import { ConfirmDialog } from './ConfirmDialog';
 import { ExerciseCard } from './ExerciseCard';
 import { RestTimer } from './RestTimerPanel';
 import { formatTime } from './format';
 import { useAbandonSession, useCompleteSession, useSaveSession } from './hooks';
-import { useRestTimer } from './useRestTimer';
+import type { ActiveSessionContext } from './useRestTimer';
 
 const NOTES_DEBOUNCE_MS = 600;
 const DEFAULT_REST_SECONDS = 90;
@@ -24,7 +25,7 @@ export function ActiveSession({ session }: ActiveSessionProps) {
   const { save, error: saveError, clearError } = useSaveSession(session.id);
   const complete = useCompleteSession(session.id);
   const abandon = useAbandonSession(session.id);
-  const timer = useRestTimer(session.id);
+  const { timer, restPush } = useOutletContext<ActiveSessionContext>();
 
   const [notes, setNotes] = useState(session.notes ?? '');
   const [seenNotes, setSeenNotes] = useState(session.notes);
@@ -63,6 +64,8 @@ export function ActiveSession({ session }: ActiveSessionProps) {
   return (
     <div className="space-y-4 pb-24">
       <p className="text-sm text-muted-foreground">Начата в {formatTime(session.startedAt)}</p>
+
+      <RestPushControl restPush={restPush} timer={timer} />
 
       {saveError && (
         <div
@@ -122,7 +125,10 @@ export function ActiveSession({ session }: ActiveSessionProps) {
           onClose={() => complete.reset()}
           onConfirm={() =>
             complete.mutate(notes, {
-              onSuccess: (done) => navigate(`/history/${done.id}`, { replace: true }),
+              onSuccess: (done) => {
+                timer.skip();
+                navigate(`/history/${done.id}`, { replace: true });
+              },
             })
           }
         />
@@ -140,7 +146,14 @@ export function ActiveSession({ session }: ActiveSessionProps) {
           pending={abandon.isPending}
           error={abandon.isError ? formatSaveError(abandon.error).join(' ') : null}
           onClose={() => abandon.reset()}
-          onConfirm={() => abandon.mutate(undefined, { onSuccess: () => navigate('/', { replace: true }) })}
+          onConfirm={() =>
+            abandon.mutate(undefined, {
+              onSuccess: () => {
+                timer.skip();
+                navigate('/', { replace: true });
+              },
+            })
+          }
         />
       </div>
 

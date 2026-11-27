@@ -1,5 +1,5 @@
-import { and, asc, count, eq, inArray, sql } from 'drizzle-orm';
-import { exerciseMedia, exercises, workoutExercises } from '../../db/schema';
+import { and, asc, count, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { exerciseMedia, exercises, workoutExercises, workouts } from '../../db/schema';
 import type { DbOrTx } from '../workouts/repository';
 
 export type { DbOrTx };
@@ -64,10 +64,18 @@ export function deleteMediaRow(db: DbOrTx, id: string) {
   db.delete(exerciseMedia).where(eq(exerciseMedia.id, id)).run();
 }
 
-export function listWorkoutExerciseNames(db: DbOrTx): string[] {
+export function fillExerciseDescription(db: DbOrTx, nameKey: string, description: string): void {
+  db.update(exercises)
+    .set({ description })
+    .where(and(eq(exercises.nameKey, nameKey), isNull(exercises.description)))
+    .run();
+}
+
+export function listWorkoutExercisesForBackfill(db: DbOrTx): { name: string; description: string | null }[] {
   return db
-    .selectDistinct({ name: workoutExercises.name })
+    .select({ name: workoutExercises.name, description: workoutExercises.description })
     .from(workoutExercises)
-    .all()
-    .map((row) => row.name);
+    .innerJoin(workouts, eq(workouts.id, workoutExercises.workoutId))
+    .orderBy(asc(workouts.createdAt), asc(workouts.id), asc(workoutExercises.position))
+    .all();
 }

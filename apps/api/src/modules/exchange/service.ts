@@ -101,7 +101,10 @@ function executePlan(tx: repo.DbOrTx, plan: ImportPlan) {
       });
       ensureExercises(
         tx,
-        workout.exercises.map(({ input }) => input.name),
+        workout.exercises.map(({ input }) => ({
+          name: input.name,
+          description: input.description === undefined || input.description === '' ? null : input.description,
+        })),
       );
     } else {
       const patch: Partial<workoutRepo.WorkoutRow> = { name: workout.name, updatedAt: now };
