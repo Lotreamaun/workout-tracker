@@ -118,7 +118,7 @@ export function syncWorkoutExercises(
 
   ensureExercises(
     tx,
-    items.map((item) => item.name),
+    items.map((item) => ({ name: item.name, description: nullable(item.description) })),
   );
 }
 

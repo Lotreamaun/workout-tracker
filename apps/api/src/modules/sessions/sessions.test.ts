@@ -131,6 +131,21 @@ describe('сессии тренировок (API)', () => {
       expect(await getWorkout(app, workout.id)).toEqual(templateBefore);
     });
 
+    it('сохраняет описание в снимке сессии после правки шаблона', async () => {
+      const exercise = { name: 'Жим', description: 'Техника на момент старта', plannedSets: 2 };
+      const workout = await createWorkout(app, { name: 'Снимок описания', exercises: [exercise] });
+      const session = await startSession(app, workout.id);
+      expect(session.exercises[0]?.description).toBe(exercise.description);
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/api/workouts/${workout.id}`,
+        payload: { exercises: [{ ...exercise, id: workout.exercises[0]!.id, description: 'Новая техника' }] },
+      });
+      expect(res.statusCode).toBe(200);
+      expect((await getSession(app, session.id)).exercises[0]?.description).toBe(exercise.description);
+    });
+
     it('не создаёт вторую сессию при активной: 409 SESSION_IN_PROGRESS с её id', async () => {
       const workout = await createWorkout(app);
       const another = await createWorkout(app, { name: 'Другая', exercises: [{ name: 'Тяга', plannedSets: 2 }] });

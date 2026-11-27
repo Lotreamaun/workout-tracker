@@ -72,6 +72,7 @@ export const sessionExerciseSchema = z.object({
   workoutExerciseId: z.string().nullable(),
   exercisePosition: z.number().int(),
   name: z.string(),
+  description: z.string().nullable(),
   restSeconds: z.number().int().nullable(),
   isSkipped: z.boolean(),
   // Связь с библиотекой по нормализованному названию из снимка; только для чтения.
